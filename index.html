@@ -655,7 +655,11 @@
       try {
         loginMessage.textContent = "Checking cloud save...";
         const data = await jsonpRemote({ action: "load", profileKey });
-        return data.ok && data.found ? data.profile : null;
+        if (!data.ok) return null;
+        return {
+          profile: data.found ? data.profile : null,
+          resetAt: data.resetAt || ""
+        };
       } catch (error) {
         console.warn(error);
         loginMessage.textContent = "Cloud save could not be reached, so local saves are being used.";
@@ -724,11 +728,19 @@
       });
     }
 
-    function chooseNewestProfile(remoteProfile, localProfile) {
+    function chooseNewestProfile(remoteResult, localProfile) {
+      const resetAt = remoteResult && remoteResult.resetAt ? Date.parse(remoteResult.resetAt) : 0;
+      const localTime = localProfile ? Date.parse(localProfile.updatedAt || localProfile.createdAt || 0) : 0;
+      const remoteProfile = remoteResult ? remoteResult.profile : null;
+
+      if (resetAt && localTime && localTime < resetAt) {
+        localStorage.removeItem(storageKey(localProfile.profileKey));
+        localProfile = null;
+      }
+
       if (!remoteProfile) return localProfile;
       if (!localProfile) return remoteProfile;
       const remoteTime = Date.parse(remoteProfile.updatedAt || remoteProfile.createdAt || 0);
-      const localTime = Date.parse(localProfile.updatedAt || localProfile.createdAt || 0);
       return remoteTime >= localTime ? remoteProfile : localProfile;
     }
 

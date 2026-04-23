@@ -1,5 +1,6 @@
 const SPREADSHEET_ID = "1f2HYxfmWESkjBKKi9rVzM8cnjzfunyivPHcDYzE_62M";
 const SHEET_NAME = "Players";
+const RESET_SHEET_NAME = "ResetLog";
 const ADMIN_KEY = "CHANGE_THIS_TO_A_PRIVATE_ADMIN_PASSWORD";
 const PROOF_FOLDER_ID = "PASTE_FC_ADMIN_DRIVE_FOLDER_ID_HERE";
 
@@ -7,14 +8,15 @@ function doGet(e) {
   const callback = e.parameter.callback || "callback";
   const action = e.parameter.action || "";
   const sheet = getSheet();
+  const resetSheet = getResetSheet();
   let result;
 
   if (action === "load") {
-    result = loadPlayer(sheet, e.parameter.profileKey);
+    result = loadPlayer(sheet, resetSheet, e.parameter.profileKey);
   } else if (action === "list") {
     result = isAdmin(e.parameter.adminKey) ? listPlayers(sheet) : { ok: false, error: "Not authorized." };
   } else if (action === "reset") {
-    result = isAdmin(e.parameter.adminKey) ? resetPlayer(sheet, e.parameter.profileKey) : { ok: false, error: "Not authorized." };
+    result = isAdmin(e.parameter.adminKey) ? resetPlayer(sheet, resetSheet, e.parameter.profileKey) : { ok: false, error: "Not authorized." };
   } else {
     result = { ok: false, error: "Unknown action." };
   }
@@ -31,9 +33,10 @@ function doPost(e) {
   try {
     const payload = parsePayload(e);
     const sheet = getSheet();
+    const resetSheet = getResetSheet();
 
     if (payload.action === "load") {
-      return json(loadPlayer(sheet, payload.profileKey));
+      return json(loadPlayer(sheet, resetSheet, payload.profileKey));
     }
 
     if (payload.action === "save") {
@@ -89,11 +92,27 @@ function getSheet() {
   return sheet;
 }
 
-function loadPlayer(sheet, profileKey) {
+function getResetSheet() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(RESET_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(RESET_SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["profileKey", "resetAt"]);
+  }
+
+  return sheet;
+}
+
+function loadPlayer(sheet, resetSheet, profileKey) {
   if (!profileKey) {
     return { ok: false, error: "Missing profile key." };
   }
 
+  const resetAt = getResetAt(resetSheet, profileKey);
   const values = sheet.getDataRange().getValues();
 
   for (let i = 1; i < values.length; i += 1) {
@@ -101,6 +120,7 @@ function loadPlayer(sheet, profileKey) {
       return {
         ok: true,
         found: true,
+        resetAt,
         profile: {
           version: 1,
           profileKey: values[i][0],
@@ -114,7 +134,7 @@ function loadPlayer(sheet, profileKey) {
     }
   }
 
-  return { ok: true, found: false };
+  return { ok: true, found: false, resetAt };
 }
 
 function listPlayers(sheet) {
@@ -135,21 +155,50 @@ function listPlayers(sheet) {
   return { ok: true, players };
 }
 
-function resetPlayer(sheet, profileKey) {
+function resetPlayer(sheet, resetSheet, profileKey) {
   if (!profileKey) {
     return { ok: false, error: "Missing profile key." };
   }
 
+  recordReset(resetSheet, profileKey);
+  const values = sheet.getDataRange().getValues();
+  let deleted = false;
+
+  for (let i = values.length - 1; i >= 1; i -= 1) {
+    if (values[i][0] === profileKey) {
+      sheet.deleteRow(i + 1);
+      deleted = true;
+    }
+  }
+
+  return { ok: true, deleted, resetAt: getResetAt(resetSheet, profileKey) };
+}
+
+function recordReset(sheet, profileKey) {
+  const resetAt = new Date().toISOString();
   const values = sheet.getDataRange().getValues();
 
   for (let i = 1; i < values.length; i += 1) {
     if (values[i][0] === profileKey) {
-      sheet.deleteRow(i + 1);
-      return { ok: true };
+      sheet.getRange(i + 1, 2).setValue(resetAt);
+      return;
     }
   }
 
-  return { ok: false, error: "Player not found." };
+  sheet.appendRow([profileKey, resetAt]);
+}
+
+function getResetAt(sheet, profileKey) {
+  const values = sheet.getDataRange().getValues();
+  let resetAt = "";
+
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i][0] === profileKey) {
+      resetAt = values[i][1] || resetAt;
+    }
+  }
+
+  return resetAt;
 }
 
 function savePlayer(sheet, profile) {
@@ -172,11 +221,23 @@ function savePlayer(sheet, profile) {
     if (values[i][0] === profile.profileKey) {
       row[3] = JSON.stringify(mergeProofProgress(JSON.parse(values[i][3] || "{}"), incomingProgress));
       sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
+      removeDuplicateRows(sheet, profile.profileKey, i + 1);
       return;
     }
   }
 
   sheet.appendRow(row);
+}
+
+function removeDuplicateRows(sheet, profileKey, keepRow) {
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = values.length - 1; i >= 1; i -= 1) {
+    const rowNumber = i + 1;
+    if (rowNumber !== keepRow && values[i][0] === profileKey) {
+      sheet.deleteRow(rowNumber);
+    }
+  }
 }
 
 function uploadProof(sheet, payload) {
