@@ -249,6 +249,21 @@
       background: #7ddfff;
     }
 
+    .proof-links {
+      display: grid;
+      gap: 5px;
+      margin-top: 8px;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: .72rem;
+      font-weight: 900;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .proof-links a {
+      color: var(--gold);
+    }
+
     .message {
       margin-top: 16px;
       padding: 14px 16px;
@@ -380,6 +395,8 @@
 
       const normalDone = Boolean(progress[`normal-${index}`]);
       const powerDone = Boolean(progress[`power-${index}`]);
+      const normalProof = /^https?:\/\//.test(progress[`proof-normal-${index}`] || "") ? progress[`proof-normal-${index}`] : "";
+      const powerProof = /^https?:\/\//.test(progress[`proof-power-${index}`] || "") ? progress[`proof-power-${index}`] : "";
       return `
         <article class="square ${normalDone || powerDone ? "done" : ""} ${powerDone ? "powered" : ""}">
           <strong>#${cell.sourceIndex}</strong>
@@ -389,6 +406,10 @@
           </div>
           <p>${escapeHTML(cell.normal)}</p>
           <p><strong>Power:</strong> ${escapeHTML(powerText(cell))}</p>
+          <div class="proof-links">
+            ${normalProof ? `<a href="${escapeHTML(normalProof)}" target="_blank" rel="noopener">Normal Proof</a>` : ""}
+            ${powerProof ? `<a href="${escapeHTML(powerProof)}" target="_blank" rel="noopener">Power Proof</a>` : ""}
+          </div>
         </article>
       `;
     }

@@ -361,6 +361,44 @@
 
     .check input { width: 18px; height: 18px; accent-color: var(--gold); }
 
+    .proofs {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .proof {
+      display: grid;
+      gap: 5px;
+      min-height: 54px;
+      padding: 9px;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .05);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .proof input {
+      width: 100%;
+      color: var(--muted);
+      font-size: .66rem;
+      text-transform: none;
+    }
+
+    .proof-status {
+      color: var(--gold);
+      font-size: .64rem;
+      letter-spacing: .04em;
+    }
+
     .free-mark {
       position: relative;
       display: grid;
@@ -456,6 +494,7 @@
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1_yIPH7Ly8-oYcWlU4EonsbJSVgMtEZXcYo24xPi6_04/export?format=csv&gid=0";
     const REMOTE_SAVE_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwnRAozSexZI_g65iSbVgIoXnsmTXy2ql6y_aFEN3e7hqvCYsq6cMUgAJktNtNacY6/exec";
     const STORAGE_PREFIX = "wfct-advanced-bingo-profile:";
+    const MAX_PROOF_BYTES = 5 * 1024 * 1024;
     const fallbackChallenges = [
       ["Do A Dawntrail Extreme (Besides Current)", "Get A Mount To Drop", "Parse 95 or higher"],
       ["Complete Shinryu Unreal", "No Vuln Stacks", ""],
@@ -710,6 +749,12 @@
       return [cell.powerOne, cell.powerTwo].filter(Boolean).join(" + ") || "No power-up listed yet.";
     }
 
+    function proofStatus(index, proofType) {
+      const proof = activeProfile.progress[`proof-${proofType}-${index}`];
+      if (!proof) return "No proof yet";
+      return /^https?:\/\//.test(proof) ? "Proof uploaded" : proof;
+    }
+
     function updateStats() {
       const challengeCells = activeProfile.board.filter((cell) => cell.type === "challenge").length;
       const normals = Object.entries(activeProfile.progress).filter(([key, value]) => key.startsWith("normal-") && value).length;
@@ -738,6 +783,18 @@
             <div class="checks">
               <label class="check"><input type="checkbox" data-check="normal-${index}" ${normalChecked ? "checked" : ""}> Normal</label>
               <label class="check"><input type="checkbox" data-check="power-${index}" ${powerChecked ? "checked" : ""}> Power-Up</label>
+            </div>
+            <div class="proofs">
+              <label class="proof">
+                Normal Proof
+                <input type="file" accept="image/*" data-proof="normal" data-cell="${index}">
+                <span class="proof-status">${escapeHTML(proofStatus(index, "normal"))}</span>
+              </label>
+              <label class="proof">
+                Power Proof
+                <input type="file" accept="image/*" data-proof="power" data-cell="${index}">
+                <span class="proof-status">${escapeHTML(proofStatus(index, "power"))}</span>
+              </label>
             </div>
           </article>`;
       }).join("");
@@ -809,6 +866,60 @@
       saveProfile();
       renderBoard();
     });
+
+    board.addEventListener("change", async (event) => {
+      const input = event.target.closest("input[type='file'][data-proof]");
+      if (!input || !activeProfile || !input.files.length) return;
+
+      const file = input.files[0];
+      const cellIndex = input.dataset.cell;
+      const proofType = input.dataset.proof;
+      const proofKey = `proof-${proofType}-${cellIndex}`;
+
+      if (!file.type.startsWith("image/")) {
+        saveStatus.textContent = "Proof must be an image file.";
+        input.value = "";
+        return;
+      }
+
+      if (file.size > MAX_PROOF_BYTES) {
+        saveStatus.textContent = "Proof image is too large. Please use an image under 5 MB.";
+        input.value = "";
+        return;
+      }
+
+      try {
+        saveStatus.textContent = "Uploading proof...";
+        const dataUrl = await readFileAsDataURL(file);
+        activeProfile.progress[proofKey] = "Upload sent";
+        localStorage.setItem(storageKey(activeProfile.profileKey), JSON.stringify(activeProfile));
+        postToRemote({
+          action: "uploadProof",
+          profileKey: activeProfile.profileKey,
+          playerName: activeProfile.playerName,
+          cellIndex,
+          proofType,
+          fileName: file.name,
+          dataUrl
+        });
+        saveStatus.textContent = "Proof upload sent.";
+        renderBoard();
+      } catch (error) {
+        console.warn(error);
+        saveStatus.textContent = "Proof upload failed.";
+      } finally {
+        input.value = "";
+      }
+    });
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
 
     $("#signOutButton").addEventListener("click", () => {
       activeProfile = null;
