@@ -254,3 +254,8 @@ function json(data) {
 function isAdmin(adminKey) {
   return Boolean(adminKey) && adminKey === ADMIN_KEY;
 }
+
+function testProofFolderAccess() {
+  const folder = DriveApp.getFolderById(PROOF_FOLDER_ID);
+  Logger.log(folder.getName());
+}
