@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WFCT Advanced Bingo</title>
+  <style>
+    :root {
+      --ink: #fff8e7;
+      --muted: rgba(255, 248, 231, .72);
+      --glass: rgba(12, 18, 24, .66);
+      --glass-strong: rgba(14, 18, 24, .88);
+      --line: rgba(255, 248, 231, .24);
+      --gold: #ffd56a;
+      --blue: #7ddfff;
+      --pink: #ff7adf;
+      --green: #a9ff8f;
+      --shadow: 0 26px 70px rgba(0, 0, 0, .48);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #091014; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255, 216, 105, .34), transparent 25rem),
+        linear-gradient(180deg, rgba(4, 8, 12, .36), rgba(4, 8, 12, .88)),
+        url("F95kIyFJBfnXUKrHOXWKssgA5Q.jpg") center top / cover fixed;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    body::before {
+      background:
+        linear-gradient(90deg, rgba(9, 16, 20, .88), transparent 21%, transparent 79%, rgba(9, 16, 20, .88)),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 14px);
+      mix-blend-mode: screen;
+    }
+
+    body::after { background: radial-gradient(circle at 50% 50%, transparent 0 46%, rgba(2, 4, 7, .68) 100%); }
+    button, input { font: inherit; }
+
+    .page {
+      width: min(1240px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 52px 0 72px;
+    }
+
+    .hero,
+    .panel,
+    .board-shell {
+      border: 1px solid rgba(255, 255, 255, .18);
+      background:
+        linear-gradient(135deg, rgba(255, 213, 106, .16), transparent 35%),
+        linear-gradient(180deg, rgba(8, 12, 18, .72), rgba(8, 12, 18, .45));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+      animation: rise-in 700ms ease both;
+    }
+
+    .hero {
+      position: relative;
+      padding: clamp(28px, 5vw, 58px);
+      border-radius: calc(var(--radius) + 10px);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      right: -110px;
+      top: -130px;
+      border-radius: 50%;
+      background: conic-gradient(from 120deg, var(--gold), var(--blue), var(--pink), var(--green), var(--gold));
+      filter: blur(42px);
+      opacity: .42;
+      animation: slow-spin 14s linear infinite;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      margin: 0 0 18px;
+      padding: 9px 14px;
+      border: 1px solid rgba(255, 213, 106, .42);
+      border-radius: 999px;
+      color: var(--gold);
+      background: rgba(255, 213, 106, .1);
+      font: 700 .78rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      position: relative;
+      max-width: 920px;
+      margin: 0;
+      font-size: clamp(3rem, 9vw, 7.4rem);
+      line-height: .88;
+      letter-spacing: -.07em;
+      text-wrap: balance;
+      text-shadow: 0 8px 34px rgba(0, 0, 0, .5);
+    }
+
+    .intro,
+    .note,
+    .message {
+      position: relative;
+      color: var(--muted);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      line-height: 1.6;
+    }
+
+    .intro {
+      max-width: 820px;
+      margin: 22px 0 0;
+      font-size: clamp(1rem, 2vw, 1.18rem);
+    }
+
+    .panel,
+    .board-shell {
+      margin-top: 22px;
+      padding: clamp(20px, 4vw, 34px);
+      border-radius: var(--radius);
+    }
+
+    h2 {
+      margin: 0;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+      letter-spacing: -.04em;
+    }
+
+    .login-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: end;
+      margin-top: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      color: var(--gold);
+      font: 900 .78rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .field input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      outline: 0;
+      padding: 16px 18px;
+      color: var(--ink);
+      background: rgba(9, 16, 20, .72);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .button {
+      min-height: 54px;
+      border: 0;
+      border-radius: 18px;
+      padding: 0 22px;
+      color: #181108;
+      background:
+        radial-gradient(circle at 30% 25%, #fff9c7, transparent 34%),
+        linear-gradient(135deg, #ffe28b, #d88920);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .42), 0 14px 30px rgba(216, 137, 32, .28);
+      cursor: pointer;
+      font: 900 .85rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .button.secondary {
+      color: var(--ink);
+      background: rgba(255, 255, 255, .08);
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+
+    .button.danger {
+      color: #2a0909;
+      background: linear-gradient(135deg, #ffc3c3, #ff8c8c);
+    }
+
+    .hidden { display: none !important; }
+
+    .message {
+      margin: 16px 0 0;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(9, 16, 20, .54);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
+      gap: 12px;
+      margin: 22px 0;
+      animation: rise-in 700ms 110ms ease both;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--glass);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, .28);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .stat strong {
+      display: block;
+      overflow: hidden;
+      color: var(--gold);
+      font-size: 1.45rem;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .board-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .board-wrap {
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .bingo-board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(178px, 1fr));
+      gap: 12px;
+      min-width: 920px;
+    }
+
+    .square {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 250px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(12, 18, 24, .88), rgba(12, 18, 24, .58));
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, .25);
+    }
+
+    .square.complete { border-color: rgba(169, 255, 143, .68); }
+
+    .square.powered {
+      border: 2px solid transparent;
+      background:
+        linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box,
+        conic-gradient(from var(--angle), #ff4fd8, #56e3ff, #9dff74, #ffd56a, #ff4fd8) border-box;
+      animation: border-spin 4.5s linear infinite;
+    }
+
+    .square.free {
+      place-items: center;
+      text-align: center;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255, 249, 199, .28), transparent 44%),
+        linear-gradient(135deg, rgba(255, 213, 106, .32), rgba(12, 18, 24, .74));
+    }
+
+    .square-number {
+      position: relative;
+      display: inline-flex;
+      width: fit-content;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: #181108;
+      background: var(--gold);
+      font: 900 .72rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .challenge-text {
+      position: relative;
+      display: grid;
+      gap: 12px;
+    }
+
+    .challenge-text h3 {
+      margin: 0 0 4px;
+      color: var(--gold);
+      font: 900 .68rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .challenge-text h3.power-label { color: #9dfffe; }
+    .challenge-text p { margin: 0; font-size: .98rem; line-height: 1.35; }
+
+    .checks {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 42px;
+      padding: 8px 9px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .07);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .76rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .check input { width: 18px; height: 18px; accent-color: var(--gold); }
+
+    .free-mark {
+      position: relative;
+      display: grid;
+      gap: 8px;
+    }
+
+    .free-mark strong {
+      color: var(--gold);
+      font-size: clamp(2.2rem, 5vw, 4.5rem);
+      line-height: .9;
+      letter-spacing: -.08em;
+      text-shadow: 0 10px 32px rgba(0, 0, 0, .42);
+    }
+
+    .free-mark span {
+      color: var(--muted);
+      font: 900 .8rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    @property --angle {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    @keyframes border-spin { to { --angle: 360deg; } }
+    @keyframes slow-spin { to { transform: rotate(360deg); } }
+    @keyframes rise-in {
+      from { opacity: 0; transform: translateY(24px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 980px) {
+      body { background-attachment: scroll; }
+      .login-form, .topbar { grid-template-columns: 1fr; }
+      .board-heading { display: grid; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <p class="eyebrow">WFCT Advanced</p>
+      <h1 id="page-title">Interactive Bingo</h1>
+      <p class="intro">Sign in with your name to roll a personal 5x5 card from the shared challenge sheet. The center is free, and each challenge square tracks both the normal clear and the power-up bonus.</p>
+    </section>
+
+    <section id="loginPanel" class="panel" aria-labelledby="login-title">
+      <h2 id="login-title">Claim your card</h2>
+      <p class="note">Your first login creates a random board. Use the same name and optional password on this browser to reopen the same card and keep your checkmarks.</p>
+      <form id="loginForm" class="login-form">
+        <label class="field">Player name <input id="playerName" autocomplete="username" required placeholder="Example: Oats"></label>
+        <label class="field">Optional password <input id="playerPassword" type="password" autocomplete="current-password" placeholder="Optional"></label>
+        <button id="loginButton" class="button" type="submit">Open Board</button>
+      </form>
+      <p id="loginMessage" class="message" role="status">Loading challenge sheet...</p>
+      <p class="note">Static-site note: this version saves in browser storage. True cross-device persistence needs a tiny Google Apps Script or backend write endpoint because GitHub Pages cannot write directly to a Google Sheet.</p>
+    </section>
+
+    <section id="playerPanel" class="topbar hidden" aria-label="Player tools">
+      <div class="stat"><strong id="playerLabel">-</strong><span>Player</span></div>
+      <div class="stat"><strong id="normalCount">0/24</strong><span>Normal Done</span></div>
+      <div class="stat"><strong id="powerCount">0/24</strong><span>Power-Ups</span></div>
+      <div class="stat"><strong id="bingoCount">0</strong><span>Bingo Lines</span></div>
+      <button id="signOutButton" class="button secondary" type="button">Sign Out</button>
+      <button id="resetButton" class="button danger" type="button">Reset Card</button>
+    </section>
+
+    <section id="boardSection" class="board-shell hidden" aria-labelledby="board-title">
+      <div class="board-heading">
+        <div>
+          <h2 id="board-title">Your Bingo Card</h2>
+          <p class="note">A square counts for bingo when either its normal or power-up checkbox is marked.</p>
+        </div>
+        <p id="saveStatus" class="note" aria-live="polite">Saved locally.</p>
+      </div>
+      <div class="board-wrap">
+        <section id="bingoBoard" class="bingo-board" aria-label="5 by 5 bingo board"></section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1_yIPH7Ly8-oYcWlU4EonsbJSVgMtEZXcYo24xPi6_04/export?format=csv&gid=0";
+    const REMOTE_SAVE_ENDPOINT = "";
+    const STORAGE_PREFIX = "wfct-advanced-bingo-profile:";
+    const fallbackChallenges = [
+      ["Do A Dawntrail Extreme (Besides Current)", "Get A Mount To Drop", "Parse 95 or higher"],
+      ["Complete Shinryu Unreal", "No Vuln Stacks", ""],
+      ["Complete a Frontline Match", "Win the match", ""],
+      ["Complete Expert Roulette", "Use A No Healer Comp", ""],
+      ["Complete Treasure Maps and 1 Instance of Treasure Dungeon", "Get to the Final Round", ""],
+      ["Play 10 Triple Triad Matches against someone in the FC", "Win a majority", ""],
+      ["Kill 5 Fates Together in any Dawntrail Zone", "Spawn a Forbidden", ""],
+      ["Complete 10 Floors in the Deep Dungeon", "Get 5 or more treasures", ""],
+      ["Complete 5 SEs together in Field Operation", "No Deaths", ""],
+      ["Complete Trials, Normal Raids, Alliance Roulettes", "No Vulns", ""],
+      ["Complete Leveling, High Level, Level Cap Roulettes", "No Vulns", ""],
+      ["Complete M10 with a Summer Glam On", "Get killed by each brother once", ""],
+      ["Complete M9 with a Master / Dominatrix Glam", "Let her get to max stacks", ""],
+      ["Complete M5 with a Disco Glam On", "Pass Every Dance Challenge", ""],
+      ["Complete M6 with an Artist Glam On", "No Vulns", ""],
+      ["Complete M2 with a Yellow / Black Glam On", "Fall In Love 3 Times", ""],
+      ["Complete Zelenia trial w/ a Knight Outfit On", "No Vulns", ""],
+      ["Complete M1 with a Cat Outfit On", "No Vulns", ""],
+      ["Complete M3 with a Fire Outfit On", "No Vulns", ""],
+      ["Complete M4 with a Thunder Outfit On", "No Vulns", ""],
+      ["Complete M7 with a City Outfit On", "No Vulns", ""],
+      ["Complete M8 with a Earth or Wind Outfit On", "No Vulns", ""],
+      ["Complete M11 with a King or Queen Outfit On", "No Vulns", ""],
+      ["Complete M12 with a Dragon Outfit On", "No Vulns", ""]
+    ].map(([normal, powerOne, powerTwo]) => ({ normal, powerOne, powerTwo }));
+
+    const $ = (selector) => document.querySelector(selector);
+    const loginPanel = $("#loginPanel");
+    const loginForm = $("#loginForm");
+    const loginButton = $("#loginButton");
+    const loginMessage = $("#loginMessage");
+    const playerNameInput = $("#playerName");
+    const passwordInput = $("#playerPassword");
+    const playerPanel = $("#playerPanel");
+    const boardSection = $("#boardSection");
+    const board = $("#bingoBoard");
+    const playerLabel = $("#playerLabel");
+    const normalCount = $("#normalCount");
+    const powerCount = $("#powerCount");
+    const bingoCount = $("#bingoCount");
+    const saveStatus = $("#saveStatus");
+    let allChallenges = [];
+    let activeProfile = null;
+
+    function escapeHTML(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let quoted = false;
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+        if (char === "\"" && quoted && next === "\"") {
+          cell += "\"";
+          i += 1;
+        } else if (char === "\"") {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          row.push(cell.trim());
+          cell = "";
+        } else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") i += 1;
+          row.push(cell.trim());
+          if (row.some(Boolean)) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += char;
+        }
+      }
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      return rows;
+    }
+
+    function normalizeRows(rows) {
+      const body = rows[0] && /normal|challenge|power/i.test(rows[0].join(" ")) ? rows.slice(1) : rows;
+      return body.filter((row) => row.some(Boolean)).map((row) => ({
+        normal: row[0] || "",
+        powerOne: row[1] || "",
+        powerTwo: row[2] || ""
+      }));
+    }
+
+    async function digest(value) {
+      if (window.crypto && window.crypto.subtle) {
+        const bytes = new TextEncoder().encode(value);
+        const hash = await window.crypto.subtle.digest("SHA-256", bytes);
+        return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
+      }
+      let hash = 5381;
+      for (let i = 0; i < value.length; i += 1) hash = ((hash << 5) + hash) + value.charCodeAt(i);
+      return String(hash >>> 0);
+    }
+
+    function randomIndex(max) {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const values = new Uint32Array(1);
+        window.crypto.getRandomValues(values);
+        return values[0] % max;
+      }
+      return Math.floor(Math.random() * max);
+    }
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = randomIndex(i + 1);
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function makeBoard(challenges) {
+      const chosen = shuffle(challenges.map((challenge, index) => ({
+        sourceIndex: index + 1,
+        normal: challenge.normal,
+        powerOne: challenge.powerOne,
+        powerTwo: challenge.powerTwo
+      }))).slice(0, 24);
+      return Array.from({ length: 25 }, (_, index) => index === 12
+        ? { type: "free" }
+        : { type: "challenge", ...chosen.shift() });
+    }
+
+    function storageKey(profileKey) {
+      return `${STORAGE_PREFIX}${profileKey}`;
+    }
+
+    function saveProfile() {
+      if (!activeProfile) return;
+      activeProfile.updatedAt = new Date().toISOString();
+      localStorage.setItem(storageKey(activeProfile.profileKey), JSON.stringify(activeProfile));
+      saveStatus.textContent = "Saved locally.";
+      syncProfile(activeProfile);
+    }
+
+    async function syncProfile(profile) {
+      if (!REMOTE_SAVE_ENDPOINT) return;
+      try {
+        saveStatus.textContent = "Syncing...";
+        const response = await fetch(REMOTE_SAVE_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profile)
+        });
+        if (!response.ok) throw new Error("Remote save failed.");
+        saveStatus.textContent = "Synced.";
+      } catch (error) {
+        console.warn(error);
+        saveStatus.textContent = "Saved locally. Remote sync failed.";
+      }
+    }
+
+    function countLines(profile) {
+      const complete = profile.board.map((cell, index) => (
+        cell.type === "free" || profile.progress[`normal-${index}`] || profile.progress[`power-${index}`]
+      ));
+      const lines = [
+        [0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14], [15, 16, 17, 18, 19], [20, 21, 22, 23, 24],
+        [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24],
+        [0, 6, 12, 18, 24], [4, 8, 12, 16, 20]
+      ];
+      return lines.filter((line) => line.every((index) => complete[index])).length;
+    }
+
+    function powerText(cell) {
+      return [cell.powerOne, cell.powerTwo].filter(Boolean).join(" + ") || "No power-up listed yet.";
+    }
+
+    function updateStats() {
+      const challengeCells = activeProfile.board.filter((cell) => cell.type === "challenge").length;
+      const normals = Object.entries(activeProfile.progress).filter(([key, value]) => key.startsWith("normal-") && value).length;
+      const powers = Object.entries(activeProfile.progress).filter(([key, value]) => key.startsWith("power-") && value).length;
+      playerLabel.textContent = activeProfile.playerName;
+      normalCount.textContent = `${normals}/${challengeCells}`;
+      powerCount.textContent = `${powers}/${challengeCells}`;
+      bingoCount.textContent = countLines(activeProfile);
+    }
+
+    function renderBoard() {
+      board.innerHTML = activeProfile.board.map((cell, index) => {
+        if (cell.type === "free") {
+          return `<article class="square free complete" aria-label="Free square"><div class="free-mark"><span>Center Square</span><strong>Free</strong><span>Counts for every card</span></div></article>`;
+        }
+        const normalChecked = Boolean(activeProfile.progress[`normal-${index}`]);
+        const powerChecked = Boolean(activeProfile.progress[`power-${index}`]);
+        const squareClass = ["square", normalChecked || powerChecked ? "complete" : "", powerChecked ? "powered" : ""].filter(Boolean).join(" ");
+        return `
+          <article class="${squareClass}">
+            <span class="square-number">#${cell.sourceIndex}</span>
+            <div class="challenge-text">
+              <section><h3>Normal Challenge</h3><p>${escapeHTML(cell.normal || "Challenge coming soon.")}</p></section>
+              <section><h3 class="power-label">Power-Up Challenge</h3><p>${escapeHTML(powerText(cell))}</p></section>
+            </div>
+            <div class="checks">
+              <label class="check"><input type="checkbox" data-check="normal-${index}" ${normalChecked ? "checked" : ""}> Normal</label>
+              <label class="check"><input type="checkbox" data-check="power-${index}" ${powerChecked ? "checked" : ""}> Power-Up</label>
+            </div>
+          </article>`;
+      }).join("");
+      updateStats();
+    }
+
+    function showBoard() {
+      loginPanel.classList.add("hidden");
+      playerPanel.classList.remove("hidden");
+      boardSection.classList.remove("hidden");
+      renderBoard();
+    }
+
+    async function loadChallenges() {
+      try {
+        const response = await fetch(SHEET_CSV_URL);
+        if (!response.ok) throw new Error("Sheet could not be loaded.");
+        allChallenges = normalizeRows(parseCSV(await response.text()));
+        loginMessage.textContent = `Loaded ${allChallenges.length} challenges from the sheet.`;
+      } catch (error) {
+        console.warn(error);
+        allChallenges = fallbackChallenges;
+        loginMessage.textContent = "Could not reach the sheet, so fallback challenges are loaded.";
+      }
+    }
+
+    const challengeLoad = loadChallenges();
+
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      loginButton.disabled = true;
+      loginMessage.textContent = "Opening your card...";
+      try {
+        await challengeLoad;
+        const playerName = playerNameInput.value.trim().replace(/\s+/g, " ");
+        if (!playerName) {
+          loginMessage.textContent = "Please enter a player name.";
+          return;
+        }
+        if (allChallenges.length < 24) {
+          loginMessage.textContent = "The challenge sheet needs at least 24 challenges to make a bingo card.";
+          return;
+        }
+        const profileKey = await digest(`${playerName.toLowerCase()}\n${passwordInput.value}`);
+        const existing = JSON.parse(localStorage.getItem(storageKey(profileKey)) || "null");
+        activeProfile = existing || {
+          version: 1,
+          profileKey,
+          playerName,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          board: makeBoard(allChallenges),
+          progress: {}
+        };
+        activeProfile.playerName = playerName;
+        saveProfile();
+        showBoard();
+      } finally {
+        loginButton.disabled = false;
+      }
+    });
+
+    board.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("input[type='checkbox'][data-check]");
+      if (!checkbox || !activeProfile) return;
+      activeProfile.progress[checkbox.dataset.check] = checkbox.checked;
+      saveProfile();
+      renderBoard();
+    });
+
+    $("#signOutButton").addEventListener("click", () => {
+      activeProfile = null;
+      loginPanel.classList.remove("hidden");
+      playerPanel.classList.add("hidden");
+      boardSection.classList.add("hidden");
+      passwordInput.value = "";
+      playerNameInput.focus();
+    });
+
+    $("#resetButton").addEventListener("click", () => {
+      if (!activeProfile || !window.confirm("Reset this saved card and roll a fresh one for this name/password?")) return;
+      localStorage.removeItem(storageKey(activeProfile.profileKey));
+      activeProfile = {
+        version: 1,
+        profileKey: activeProfile.profileKey,
+        playerName: activeProfile.playerName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        board: makeBoard(allChallenges),
+        progress: {}
+      };
+      saveProfile();
+      renderBoard();
+    });
+  </script>
+</body>
+</html>
