@@ -336,7 +336,7 @@
     .checks {
       position: relative;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 8px;
       margin-top: 14px;
       font-family: "Trebuchet MS", Verdana, sans-serif;
@@ -347,13 +347,13 @@
       align-items: center;
       gap: 7px;
       min-height: 42px;
-      padding: 8px 9px;
+      padding: 8px 7px;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: rgba(255, 255, 255, .07);
       color: var(--muted);
       cursor: pointer;
-      font-size: .76rem;
+      font-size: .68rem;
       font-weight: 900;
       letter-spacing: .06em;
       text-transform: uppercase;
@@ -364,7 +364,6 @@
     .proofs {
       position: relative;
       display: grid;
-      grid-template-columns: 1fr 1fr;
       gap: 8px;
       margin-top: 8px;
       font-family: "Trebuchet MS", Verdana, sans-serif;
@@ -749,8 +748,10 @@
       return [cell.powerOne, cell.powerTwo].filter(Boolean).join(" + ") || "No power-up listed yet.";
     }
 
-    function proofStatus(index, proofType) {
-      const proof = activeProfile.progress[`proof-${proofType}-${index}`];
+    function proofStatus(index) {
+      const proof = activeProfile.progress[`proof-${index}`]
+        || activeProfile.progress[`proof-normal-${index}`]
+        || activeProfile.progress[`proof-power-${index}`];
       if (!proof) return "No proof yet";
       return /^https?:\/\//.test(proof) ? "Proof uploaded" : proof;
     }
@@ -786,14 +787,9 @@
             </div>
             <div class="proofs">
               <label class="proof">
-                Normal Proof
-                <input type="file" accept="image/*" data-proof="normal" data-cell="${index}">
-                <span class="proof-status">${escapeHTML(proofStatus(index, "normal"))}</span>
-              </label>
-              <label class="proof">
-                Power Proof
-                <input type="file" accept="image/*" data-proof="power" data-cell="${index}">
-                <span class="proof-status">${escapeHTML(proofStatus(index, "power"))}</span>
+                Screenshot Proof
+                <input type="file" accept="image/*" data-cell="${index}">
+                <span class="proof-status">${escapeHTML(proofStatus(index))}</span>
               </label>
             </div>
           </article>`;
@@ -863,18 +859,23 @@
       const checkbox = event.target.closest("input[type='checkbox'][data-check]");
       if (!checkbox || !activeProfile) return;
       activeProfile.progress[checkbox.dataset.check] = checkbox.checked;
+
+      if (checkbox.dataset.check.startsWith("power-") && checkbox.checked) {
+        const cellIndex = checkbox.dataset.check.replace("power-", "");
+        activeProfile.progress[`normal-${cellIndex}`] = true;
+      }
+
       saveProfile();
       renderBoard();
     });
 
     board.addEventListener("change", async (event) => {
-      const input = event.target.closest("input[type='file'][data-proof]");
+      const input = event.target.closest("input[type='file'][data-cell]");
       if (!input || !activeProfile || !input.files.length) return;
 
       const file = input.files[0];
       const cellIndex = input.dataset.cell;
-      const proofType = input.dataset.proof;
-      const proofKey = `proof-${proofType}-${cellIndex}`;
+      const proofKey = `proof-${cellIndex}`;
 
       if (!file.type.startsWith("image/")) {
         saveStatus.textContent = "Proof must be an image file.";
@@ -898,7 +899,6 @@
           profileKey: activeProfile.profileKey,
           playerName: activeProfile.playerName,
           cellIndex,
-          proofType,
           fileName: file.name,
           dataUrl
         });

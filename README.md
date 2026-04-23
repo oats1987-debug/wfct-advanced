@@ -8,7 +8,7 @@ Interactive bingo-card version of the WFCT challenge site.
 - Creates a randomized 5x5 card for each player, with a free center square.
 - Stores each player's board and checkbox progress in browser storage using their name plus optional password as the profile key.
 - Tracks normal clears, power-up clears, and completed bingo lines.
-- Lets players upload normal and power-up screenshot proof for each challenge tile.
+- Lets players upload one screenshot proof for each challenge tile.
 - Provides an organizer admin page for viewing saved boards and resetting a player.
 
 ## Persistence Note

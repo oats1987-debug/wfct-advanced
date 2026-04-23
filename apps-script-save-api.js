@@ -186,9 +186,8 @@ function uploadProof(sheet, payload) {
 
   const profileKey = payload.profileKey;
   const cellIndex = payload.cellIndex;
-  const proofType = payload.proofType;
 
-  if (!profileKey || cellIndex === undefined || !proofType || !payload.dataUrl) {
+  if (!profileKey || cellIndex === undefined || !payload.dataUrl) {
     throw new Error("Missing proof upload data.");
   }
 
@@ -205,18 +204,18 @@ function uploadProof(sheet, payload) {
   const bytes = Utilities.base64Decode(match[2]);
   const safeName = String(payload.fileName || "proof.png").replace(/[^\w.\- ]+/g, "_");
   const playerName = String(payload.playerName || "player").replace(/[^\w.\- ]+/g, "_");
-  const fileName = `${playerName}-tile-${Number(cellIndex) + 1}-${proofType}-${Date.now()}-${safeName}`;
+  const fileName = `${playerName}-tile-${Number(cellIndex) + 1}-proof-${Date.now()}-${safeName}`;
   const file = DriveApp.getFolderById(PROOF_FOLDER_ID)
     .createFile(Utilities.newBlob(bytes, mimeType, fileName));
 
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  updateProofLink(sheet, profileKey, cellIndex, proofType, file.getUrl(), fileName);
+  updateProofLink(sheet, profileKey, cellIndex, file.getUrl(), fileName);
 }
 
-function updateProofLink(sheet, profileKey, cellIndex, proofType, proofUrl, fileName) {
+function updateProofLink(sheet, profileKey, cellIndex, proofUrl, fileName) {
   const values = sheet.getDataRange().getValues();
-  const proofKey = `proof-${proofType}-${cellIndex}`;
-  const proofNameKey = `proofName-${proofType}-${cellIndex}`;
+  const proofKey = `proof-${cellIndex}`;
+  const proofNameKey = `proofName-${cellIndex}`;
 
   for (let i = 1; i < values.length; i += 1) {
     if (values[i][0] === profileKey) {

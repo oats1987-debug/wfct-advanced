@@ -395,8 +395,7 @@
 
       const normalDone = Boolean(progress[`normal-${index}`]);
       const powerDone = Boolean(progress[`power-${index}`]);
-      const normalProof = /^https?:\/\//.test(progress[`proof-normal-${index}`] || "") ? progress[`proof-normal-${index}`] : "";
-      const powerProof = /^https?:\/\//.test(progress[`proof-power-${index}`] || "") ? progress[`proof-power-${index}`] : "";
+      const proof = firstProofLink(progress, index);
       return `
         <article class="square ${normalDone || powerDone ? "done" : ""} ${powerDone ? "powered" : ""}">
           <strong>#${cell.sourceIndex}</strong>
@@ -407,11 +406,18 @@
           <p>${escapeHTML(cell.normal)}</p>
           <p><strong>Power:</strong> ${escapeHTML(powerText(cell))}</p>
           <div class="proof-links">
-            ${normalProof ? `<a href="${escapeHTML(normalProof)}" target="_blank" rel="noopener">Normal Proof</a>` : ""}
-            ${powerProof ? `<a href="${escapeHTML(powerProof)}" target="_blank" rel="noopener">Power Proof</a>` : ""}
+            ${proof ? `<a href="${escapeHTML(proof)}" target="_blank" rel="noopener">Screenshot Proof</a>` : ""}
           </div>
         </article>
       `;
+    }
+
+    function firstProofLink(progress, index) {
+      return [
+        progress[`proof-${index}`],
+        progress[`proof-normal-${index}`],
+        progress[`proof-power-${index}`]
+      ].find((value) => /^https?:\/\//.test(value || "")) || "";
     }
 
     async function loadBoards() {
