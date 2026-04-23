@@ -457,14 +457,13 @@
 
     <section id="loginPanel" class="panel" aria-labelledby="login-title">
       <h2 id="login-title">Claim your card</h2>
-      <p class="note">Your first login creates a random board. Use the same name and optional password on this browser to reopen the same card and keep your checkmarks.</p>
+      <p id="loginPersistenceNote" class="note">Your first login creates a random board. Use the same name and optional password to reopen the same card and keep your checkmarks synced to the WFCT Advanced save sheet.</p>
       <form id="loginForm" class="login-form">
         <label class="field">Player name <input id="playerName" autocomplete="username" required placeholder="Example: Oats"></label>
         <label class="field">Optional password <input id="playerPassword" type="password" autocomplete="current-password" placeholder="Optional"></label>
         <button id="loginButton" class="button" type="submit">Open Board</button>
       </form>
       <p id="loginMessage" class="message" role="status">Loading challenge sheet...</p>
-      <p class="note">Static-site note: this version saves in browser storage. True cross-device persistence needs a tiny Google Apps Script or backend write endpoint because GitHub Pages cannot write directly to a Google Sheet.</p>
     </section>
 
     <section id="playerPanel" class="topbar hidden" aria-label="Player tools">
@@ -481,7 +480,7 @@
           <h2 id="board-title">Your Bingo Card</h2>
           <p class="note">A square counts for bingo when either its normal or power-up checkbox is marked.</p>
         </div>
-        <p id="saveStatus" class="note" aria-live="polite">Saved locally.</p>
+        <p id="saveStatus" class="note" aria-live="polite">Cloud save ready.</p>
       </div>
       <div class="board-wrap">
         <section id="bingoBoard" class="bingo-board" aria-label="5 by 5 bingo board"></section>
@@ -526,6 +525,7 @@
     const loginForm = $("#loginForm");
     const loginButton = $("#loginButton");
     const loginMessage = $("#loginMessage");
+    const loginPersistenceNote = $("#loginPersistenceNote");
     const playerNameInput = $("#playerName");
     const passwordInput = $("#playerPassword");
     const playerPanel = $("#playerPanel");
@@ -538,6 +538,11 @@
     const saveStatus = $("#saveStatus");
     let allChallenges = [];
     let activeProfile = null;
+
+    if (!REMOTE_SAVE_ENDPOINT) {
+      loginPersistenceNote.textContent = "Your first login creates a random board. Use the same name and optional password on this browser to reopen the same card and keep your checkmarks.";
+      saveStatus.textContent = "Local save only.";
+    }
 
     function escapeHTML(value) {
       return String(value || "").replace(/[&<>"']/g, (char) => ({
