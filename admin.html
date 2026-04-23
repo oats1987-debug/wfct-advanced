@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wonderous FC Tales Admin</title>
+  <style>
+    :root {
+      --ink: #fff8e7;
+      --muted: rgba(255, 248, 231, .72);
+      --glass: rgba(12, 18, 24, .76);
+      --line: rgba(255, 248, 231, .24);
+      --gold: #ffd56a;
+      --green: #a9ff8f;
+      --pink: #ff9b9b;
+      --shadow: 0 26px 70px rgba(0, 0, 0, .48);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #091014; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255, 216, 105, .28), transparent 25rem),
+        linear-gradient(180deg, rgba(4, 8, 12, .38), rgba(4, 8, 12, .9)),
+        url("F95kIyFJBfnXUKrHOXWKssgA5Q.jpg") center top / cover fixed;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(90deg, rgba(9, 16, 20, .88), transparent 21%, transparent 79%, rgba(9, 16, 20, .88)),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 14px);
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .page {
+      width: min(1280px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 46px 0 72px;
+    }
+
+    .panel,
+    .player {
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(255, 213, 106, .14), transparent 36%),
+        linear-gradient(180deg, rgba(8, 12, 18, .78), rgba(8, 12, 18, .56));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+    }
+
+    .panel {
+      padding: clamp(22px, 4vw, 42px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      margin: 0 0 16px;
+      padding: 9px 14px;
+      border: 1px solid rgba(255, 213, 106, .42);
+      border-radius: 999px;
+      color: var(--gold);
+      background: rgba(255, 213, 106, .1);
+      font: 700 .78rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.7rem, 7vw, 6rem);
+      line-height: .9;
+      letter-spacing: -.07em;
+    }
+
+    h2,
+    h3 {
+      margin: 0;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .note,
+    label,
+    button,
+    input,
+    .stat,
+    .message {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .note,
+    .message {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      margin-top: 22px;
+      align-items: end;
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--gold);
+      font-size: .78rem;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      outline: 0;
+      padding: 16px 18px;
+      color: var(--ink);
+      background: rgba(9, 16, 20, .72);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    button {
+      min-height: 54px;
+      border: 0;
+      border-radius: 18px;
+      padding: 0 22px;
+      color: #181108;
+      background: linear-gradient(135deg, #ffe28b, #d88920);
+      cursor: pointer;
+      font-size: .82rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    button.danger {
+      color: #2a0909;
+      background: linear-gradient(135deg, #ffc3c3, #ff8c8c);
+    }
+
+    .players {
+      display: grid;
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .player {
+      padding: 20px;
+    }
+
+    .player-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .06);
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      color: var(--gold);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .square {
+      min-height: 132px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(9, 16, 20, .62);
+      font-size: .85rem;
+      line-height: 1.25;
+    }
+
+    .square.done {
+      border-color: rgba(169, 255, 143, .68);
+      box-shadow: inset 0 0 0 1px rgba(169, 255, 143, .18);
+    }
+
+    .square.powered {
+      border-color: rgba(125, 223, 255, .78);
+    }
+
+    .square.free {
+      display: grid;
+      place-items: center;
+      color: var(--gold);
+      font-size: 1.4rem;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .badge {
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .08);
+      color: var(--muted);
+      font: 900 .65rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .badge.done {
+      color: #172810;
+      background: var(--green);
+    }
+
+    .badge.powered {
+      color: #081d25;
+      background: #7ddfff;
+    }
+
+    .message {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(9, 16, 20, .54);
+    }
+
+    @media (max-width: 900px) {
+      body { background-attachment: scroll; }
+      .controls, .player-head { grid-template-columns: 1fr; }
+      .board { grid-template-columns: repeat(5, minmax(150px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <p class="eyebrow">Organizer Tools</p>
+      <h1>Wonderous FC Tales Admin</h1>
+      <p class="note">Enter the private admin key from Apps Script to view every saved board and reset a player if needed.</p>
+      <form id="adminForm" class="controls">
+        <label>
+          Admin key
+          <input id="adminKey" type="password" autocomplete="current-password" required>
+        </label>
+        <button type="submit">Load Boards</button>
+      </form>
+      <p id="message" class="message">No admin data loaded yet.</p>
+    </section>
+    <section id="players" class="players" aria-live="polite"></section>
+  </main>
+
+  <script>
+    const REMOTE_SAVE_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwnRAozSexZI_g65iSbVgIoXnsmTXy2ql6y_aFEN3e7hqvCYsq6cMUgAJktNtNacY6/exec";
+    const adminForm = document.querySelector("#adminForm");
+    const adminKeyInput = document.querySelector("#adminKey");
+    const message = document.querySelector("#message");
+    const playersEl = document.querySelector("#players");
+    let adminKey = "";
+
+    function escapeHTML(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function powerText(cell) {
+      return [cell.powerOne, cell.powerTwo].filter(Boolean).join(" + ") || "No power-up listed.";
+    }
+
+    function jsonpRemote(params) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `wfctAdmin_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement("script");
+        const timeout = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Request timed out."));
+        }, 10000);
+
+        function cleanup() {
+          window.clearTimeout(timeout);
+          delete window[callbackName];
+          script.remove();
+        }
+
+        window[callbackName] = (data) => {
+          cleanup();
+          resolve(data);
+        };
+
+        const url = new URL(REMOTE_SAVE_ENDPOINT);
+        Object.entries({ ...params, callback: callbackName }).forEach(([key, value]) => {
+          url.searchParams.set(key, value);
+        });
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("Request failed."));
+        };
+        script.src = url.toString();
+        document.body.append(script);
+      });
+    }
+
+    function countLines(player) {
+      const complete = player.board.map((cell, index) => (
+        cell.type === "free" || player.progress[`normal-${index}`] || player.progress[`power-${index}`]
+      ));
+      const lines = [
+        [0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14], [15, 16, 17, 18, 19], [20, 21, 22, 23, 24],
+        [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24],
+        [0, 6, 12, 18, 24], [4, 8, 12, 16, 20]
+      ];
+      return lines.filter((line) => line.every((index) => complete[index])).length;
+    }
+
+    function renderPlayers(players) {
+      if (!players.length) {
+        playersEl.innerHTML = "";
+        message.textContent = "No saved players yet.";
+        return;
+      }
+
+      message.textContent = `Loaded ${players.length} saved player board${players.length === 1 ? "" : "s"}.`;
+      playersEl.innerHTML = players.map((player) => {
+        const normals = Object.entries(player.progress || {}).filter(([key, value]) => key.startsWith("normal-") && value).length;
+        const powers = Object.entries(player.progress || {}).filter(([key, value]) => key.startsWith("power-") && value).length;
+        return `
+          <article class="player">
+            <header class="player-head">
+              <h2>${escapeHTML(player.playerName || "Unnamed Player")}</h2>
+              <div class="stat"><strong>${normals}/24</strong> Normal</div>
+              <div class="stat"><strong>${powers}/24</strong> Power</div>
+              <div class="stat"><strong>${countLines(player)}</strong> Bingos</div>
+              <button class="danger" type="button" data-reset="${escapeHTML(player.profileKey)}" data-name="${escapeHTML(player.playerName || "this player")}">Reset</button>
+            </header>
+            <section class="board">
+              ${player.board.map((cell, index) => renderSquare(cell, player.progress || {}, index)).join("")}
+            </section>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderSquare(cell, progress, index) {
+      if (cell.type === "free") {
+        return `<article class="square free">Free</article>`;
+      }
+
+      const normalDone = Boolean(progress[`normal-${index}`]);
+      const powerDone = Boolean(progress[`power-${index}`]);
+      return `
+        <article class="square ${normalDone || powerDone ? "done" : ""} ${powerDone ? "powered" : ""}">
+          <strong>#${cell.sourceIndex}</strong>
+          <div class="badges">
+            <span class="badge ${normalDone ? "done" : ""}">Normal</span>
+            <span class="badge ${powerDone ? "powered" : ""}">Power</span>
+          </div>
+          <p>${escapeHTML(cell.normal)}</p>
+          <p><strong>Power:</strong> ${escapeHTML(powerText(cell))}</p>
+        </article>
+      `;
+    }
+
+    async function loadBoards() {
+      message.textContent = "Loading saved boards...";
+      const data = await jsonpRemote({ action: "list", adminKey });
+      if (!data.ok) throw new Error(data.error || "Could not load boards.");
+      renderPlayers(data.players || []);
+    }
+
+    adminForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      adminKey = adminKeyInput.value;
+      try {
+        await loadBoards();
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    });
+
+    playersEl.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-reset]");
+      if (!button) return;
+      const playerName = button.dataset.name;
+      if (!window.confirm(`Reset ${playerName}'s saved board? They will roll a new card the next time they log in.`)) return;
+      message.textContent = `Resetting ${playerName}...`;
+      const data = await jsonpRemote({ action: "reset", adminKey, profileKey: button.dataset.reset });
+      message.textContent = data.ok ? `${playerName} was reset.` : (data.error || "Reset failed.");
+      if (data.ok) await loadBoards();
+    });
+  </script>
+</body>
+</html>

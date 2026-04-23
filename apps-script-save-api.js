@@ -1,5 +1,6 @@
 const SPREADSHEET_ID = "1f2HYxfmWESkjBKKi9rVzM8cnjzfunyivPHcDYzE_62M";
 const SHEET_NAME = "Players";
+const ADMIN_KEY = "CHANGE_THIS_TO_A_PRIVATE_ADMIN_PASSWORD";
 
 function doGet(e) {
   const callback = e.parameter.callback || "callback";
@@ -9,6 +10,10 @@ function doGet(e) {
 
   if (action === "load") {
     result = loadPlayer(sheet, e.parameter.profileKey);
+  } else if (action === "list") {
+    result = isAdmin(e.parameter.adminKey) ? listPlayers(sheet) : { ok: false, error: "Not authorized." };
+  } else if (action === "reset") {
+    result = isAdmin(e.parameter.adminKey) ? resetPlayer(sheet, e.parameter.profileKey) : { ok: false, error: "Not authorized." };
   } else {
     result = { ok: false, error: "Unknown action." };
   }
@@ -105,6 +110,41 @@ function loadPlayer(sheet, profileKey) {
   return { ok: true, found: false };
 }
 
+function listPlayers(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const players = [];
+
+  for (let i = 1; i < values.length; i += 1) {
+    players.push({
+      profileKey: values[i][0],
+      playerName: values[i][1],
+      board: JSON.parse(values[i][2] || "[]"),
+      progress: JSON.parse(values[i][3] || "{}"),
+      createdAt: values[i][4],
+      updatedAt: values[i][5]
+    });
+  }
+
+  return { ok: true, players };
+}
+
+function resetPlayer(sheet, profileKey) {
+  if (!profileKey) {
+    return { ok: false, error: "Missing profile key." };
+  }
+
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i][0] === profileKey) {
+      sheet.deleteRow(i + 1);
+      return { ok: true };
+    }
+  }
+
+  return { ok: false, error: "Player not found." };
+}
+
 function savePlayer(sheet, profile) {
   if (!profile || !profile.profileKey) {
     throw new Error("Missing profile.");
@@ -134,4 +174,8 @@ function json(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function isAdmin(adminKey) {
+  return Boolean(adminKey) && adminKey === ADMIN_KEY;
 }
