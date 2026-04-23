@@ -291,6 +291,7 @@
           <input id="adminKey" type="password" autocomplete="current-password" required>
         </label>
         <button type="submit">Load Boards</button>
+        <button id="reloadButton" type="button">Reload Boards</button>
       </form>
       <p id="message" class="message">No admin data loaded yet.</p>
     </section>
@@ -302,8 +303,13 @@
     const adminForm = document.querySelector("#adminForm");
     const adminKeyInput = document.querySelector("#adminKey");
     const message = document.querySelector("#message");
+    const reloadButton = document.querySelector("#reloadButton");
     const playersEl = document.querySelector("#players");
-    let adminKey = "";
+    let adminKey = sessionStorage.getItem("wfct-admin-key") || "";
+
+    if (adminKey) {
+      adminKeyInput.value = adminKey;
+    }
 
     function escapeHTML(value) {
       return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -421,6 +427,12 @@
     }
 
     async function loadBoards() {
+      if (!adminKey) {
+        message.textContent = "Enter the admin key first.";
+        adminKeyInput.focus();
+        return;
+      }
+
       message.textContent = "Loading saved boards...";
       const data = await jsonpRemote({ action: "list", adminKey });
       if (!data.ok) throw new Error(data.error || "Could not load boards.");
@@ -430,6 +442,17 @@
     adminForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       adminKey = adminKeyInput.value;
+      sessionStorage.setItem("wfct-admin-key", adminKey);
+      try {
+        await loadBoards();
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    });
+
+    reloadButton.addEventListener("click", async () => {
+      adminKey = adminKeyInput.value || adminKey;
+      if (adminKey) sessionStorage.setItem("wfct-admin-key", adminKey);
       try {
         await loadBoards();
       } catch (error) {
