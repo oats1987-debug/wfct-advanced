@@ -257,5 +257,9 @@ function isAdmin(adminKey) {
 
 function testProofFolderAccess() {
   const folder = DriveApp.getFolderById(PROOF_FOLDER_ID);
-  Logger.log(folder.getName());
+  const file = folder.createFile(
+    Utilities.newBlob("proof upload permission test", "text/plain", "wfct-proof-permission-test.txt")
+  );
+  Logger.log(`${folder.getName()} / ${file.getName()}`);
+  file.setTrashed(true);
 }
