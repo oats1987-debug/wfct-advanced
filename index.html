@@ -455,7 +455,7 @@
 
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1_yIPH7Ly8-oYcWlU4EonsbJSVgMtEZXcYo24xPi6_04/export?format=csv&gid=0";
-    const REMOTE_SAVE_ENDPOINT = "";
+    const REMOTE_SAVE_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwnRAozSexZI_g65iSbVgIoXnsmTXy2ql6y_aFEN3e7hqvCYsq6cMUgAJktNtNacY6/exec";
     const STORAGE_PREFIX = "wfct-advanced-bingo-profile:";
     const fallbackChallenges = [
       ["Do A Dawntrail Extreme (Besides Current)", "Get A Mount To Drop", "Parse 95 or higher"],
@@ -608,7 +608,7 @@
         const response = await fetch(REMOTE_SAVE_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profile)
+          body: JSON.stringify({ action: "save", profile })
         });
         if (!response.ok) throw new Error("Remote save failed.");
         saveStatus.textContent = "Synced.";
@@ -616,6 +616,33 @@
         console.warn(error);
         saveStatus.textContent = "Saved locally. Remote sync failed.";
       }
+    }
+
+    async function loadRemoteProfile(profileKey) {
+      if (!REMOTE_SAVE_ENDPOINT) return null;
+      try {
+        loginMessage.textContent = "Checking cloud save...";
+        const response = await fetch(REMOTE_SAVE_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "load", profileKey })
+        });
+        if (!response.ok) throw new Error("Remote load failed.");
+        const data = await response.json();
+        return data.ok && data.found ? data.profile : null;
+      } catch (error) {
+        console.warn(error);
+        loginMessage.textContent = "Cloud save could not be reached, so local saves are being used.";
+        return null;
+      }
+    }
+
+    function chooseNewestProfile(remoteProfile, localProfile) {
+      if (!remoteProfile) return localProfile;
+      if (!localProfile) return remoteProfile;
+      const remoteTime = Date.parse(remoteProfile.updatedAt || remoteProfile.createdAt || 0);
+      const localTime = Date.parse(localProfile.updatedAt || localProfile.createdAt || 0);
+      return remoteTime >= localTime ? remoteProfile : localProfile;
     }
 
     function countLines(profile) {
@@ -706,7 +733,9 @@
           return;
         }
         const profileKey = await digest(`${playerName.toLowerCase()}\n${passwordInput.value}`);
-        const existing = JSON.parse(localStorage.getItem(storageKey(profileKey)) || "null");
+        const localProfile = JSON.parse(localStorage.getItem(storageKey(profileKey)) || "null");
+        const remoteProfile = await loadRemoteProfile(profileKey);
+        const existing = chooseNewestProfile(remoteProfile, localProfile);
         activeProfile = existing || {
           version: 1,
           profileKey,
