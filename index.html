@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WFCT Advanced Bingo</title>
+  <title>Wonderous FC Tales</title>
   <style>
     :root {
       --ink: #fff8e7;
@@ -215,7 +215,7 @@
 
     .topbar {
       display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
+      grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
       gap: 12px;
       margin: 22px 0;
       animation: rise-in 700ms 110ms ease both;
@@ -413,8 +413,8 @@
 <body>
   <main class="page">
     <section class="hero" aria-labelledby="page-title">
-      <p class="eyebrow">WFCT Advanced</p>
-      <h1 id="page-title">Interactive Bingo</h1>
+      <p class="eyebrow">WFCT Event Board</p>
+      <h1 id="page-title">Wonderous FC Tales</h1>
       <p class="intro">Sign in with your name to roll a personal 5x5 card from the shared challenge sheet. The center is free, and each challenge square tracks both the normal clear and the power-up bonus.</p>
     </section>
 
@@ -436,7 +436,6 @@
       <div class="stat"><strong id="powerCount">0/24</strong><span>Power-Ups</span></div>
       <div class="stat"><strong id="bingoCount">0</strong><span>Bingo Lines</span></div>
       <button id="signOutButton" class="button secondary" type="button">Sign Out</button>
-      <button id="resetButton" class="button danger" type="button">Reset Card</button>
     </section>
 
     <section id="boardSection" class="board-shell hidden" aria-labelledby="board-title">
@@ -604,14 +603,9 @@
     async function syncProfile(profile) {
       if (!REMOTE_SAVE_ENDPOINT) return;
       try {
-        saveStatus.textContent = "Syncing...";
-        const response = await fetch(REMOTE_SAVE_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "save", profile })
-        });
-        if (!response.ok) throw new Error("Remote save failed.");
-        saveStatus.textContent = "Synced.";
+        saveStatus.textContent = "Sending cloud save...";
+        postToRemote({ action: "save", profile });
+        saveStatus.textContent = "Cloud save sent.";
       } catch (error) {
         console.warn(error);
         saveStatus.textContent = "Saved locally. Remote sync failed.";
@@ -622,19 +616,74 @@
       if (!REMOTE_SAVE_ENDPOINT) return null;
       try {
         loginMessage.textContent = "Checking cloud save...";
-        const response = await fetch(REMOTE_SAVE_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "load", profileKey })
-        });
-        if (!response.ok) throw new Error("Remote load failed.");
-        const data = await response.json();
+        const data = await jsonpRemote({ action: "load", profileKey });
         return data.ok && data.found ? data.profile : null;
       } catch (error) {
         console.warn(error);
         loginMessage.textContent = "Cloud save could not be reached, so local saves are being used.";
         return null;
       }
+    }
+
+    function postToRemote(payload) {
+      let iframe = document.querySelector("#cloudSaveFrame");
+      if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "cloudSaveFrame";
+        iframe.name = "cloudSaveFrame";
+        iframe.hidden = true;
+        document.body.append(iframe);
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = REMOTE_SAVE_ENDPOINT;
+      form.target = "cloudSaveFrame";
+      form.hidden = true;
+
+      Object.entries(payload).forEach(([name, value]) => {
+        const input = document.createElement("input");
+        input.name = name;
+        input.value = typeof value === "string" ? value : JSON.stringify(value);
+        form.append(input);
+      });
+
+      document.body.append(form);
+      form.submit();
+      form.remove();
+    }
+
+    function jsonpRemote(params) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `wfctCloud_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement("script");
+        const timeout = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Cloud save timed out."));
+        }, 10000);
+
+        function cleanup() {
+          window.clearTimeout(timeout);
+          delete window[callbackName];
+          script.remove();
+        }
+
+        window[callbackName] = (data) => {
+          cleanup();
+          resolve(data);
+        };
+
+        const url = new URL(REMOTE_SAVE_ENDPOINT);
+        Object.entries({ ...params, callback: callbackName }).forEach(([key, value]) => {
+          url.searchParams.set(key, value);
+        });
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("Cloud save script failed."));
+        };
+        script.src = url.toString();
+        document.body.append(script);
+      });
     }
 
     function chooseNewestProfile(remoteProfile, localProfile) {
@@ -770,21 +819,6 @@
       playerNameInput.focus();
     });
 
-    $("#resetButton").addEventListener("click", () => {
-      if (!activeProfile || !window.confirm("Reset this saved card and roll a fresh one for this name/password?")) return;
-      localStorage.removeItem(storageKey(activeProfile.profileKey));
-      activeProfile = {
-        version: 1,
-        profileKey: activeProfile.profileKey,
-        playerName: activeProfile.playerName,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        board: makeBoard(allChallenges),
-        progress: {}
-      };
-      saveProfile();
-      renderBoard();
-    });
   </script>
 </body>
 </html>

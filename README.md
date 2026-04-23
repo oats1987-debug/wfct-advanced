@@ -1,4 +1,4 @@
-# WFCT Advanced
+# Wonderous FC Tales
 
 Interactive bingo-card version of the WFCT challenge site.
 
@@ -17,4 +17,6 @@ This first version is static-site safe: saves persist in the same browser. For t
 
 - `index.html` contains the full interactive bingo app.
 - `F95kIyFJBfnXUKrHOXWKssgA5Q.jpg` is the shared background image from the original site.
+- `apps-script-save-api.js` contains the Google Apps Script save/load API code to paste into Apps Script.
+
 Site: https://oats1987-debug.github.io/wfct-advanced/
