@@ -284,7 +284,7 @@
     <section class="panel">
       <p class="eyebrow">Organizer Tools</p>
       <h1>Wonderous FC Tales Admin</h1>
-      <p class="note">Enter the private admin key from Apps Script to view every saved board and reset a player if needed.</p>
+      <p class="note">Enter the private admin key from Apps Script to view every saved board, clear a player's password, or fully reset a player if needed.</p>
       <form id="adminForm" class="controls">
         <label>
           Admin key
@@ -384,6 +384,7 @@
               <div class="stat"><strong>${normals}/24</strong> Normal</div>
               <div class="stat"><strong>${powers}/24</strong> Power</div>
               <div class="stat"><strong>${countLines(player)}</strong> Bingos</div>
+              <button type="button" data-reset-password="${escapeHTML(player.profileKey)}" data-name="${escapeHTML(player.playerName || "this player")}">Reset Password</button>
               <button class="danger" type="button" data-reset="${escapeHTML(player.profileKey)}" data-name="${escapeHTML(player.playerName || "this player")}">Reset</button>
             </header>
             <section class="board">
@@ -461,6 +462,17 @@
     });
 
     playersEl.addEventListener("click", async (event) => {
+      const passwordButton = event.target.closest("[data-reset-password]");
+      if (passwordButton) {
+        const playerName = passwordButton.dataset.name;
+        if (!window.confirm(`Clear ${playerName}'s password but keep the current board? The next login with that name can set a new password.`)) return;
+        message.textContent = `Clearing ${playerName}'s password...`;
+        const data = await jsonpRemote({ action: "resetPassword", adminKey, profileKey: passwordButton.dataset.resetPassword });
+        message.textContent = data.ok ? `${playerName}'s password was cleared.` : (data.error || "Password reset failed.");
+        if (data.ok) await loadBoards();
+        return;
+      }
+
       const button = event.target.closest("[data-reset]");
       if (!button) return;
       const playerName = button.dataset.name;

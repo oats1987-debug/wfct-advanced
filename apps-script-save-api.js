@@ -11,10 +11,14 @@ function doGet(e) {
   const resetSheet = getResetSheet();
   let result;
 
-  if (action === "load") {
+  if (action === "login") {
+    result = loginPlayer(sheet, resetSheet, e.parameter.normalizedName, e.parameter.profileKey);
+  } else if (action === "load") {
     result = loadPlayer(sheet, resetSheet, e.parameter.profileKey);
   } else if (action === "list") {
     result = isAdmin(e.parameter.adminKey) ? listPlayers(sheet) : { ok: false, error: "Not authorized." };
+  } else if (action === "resetPassword") {
+    result = isAdmin(e.parameter.adminKey) ? resetPlayerPassword(sheet, e.parameter.profileKey) : { ok: false, error: "Not authorized." };
   } else if (action === "reset") {
     result = isAdmin(e.parameter.adminKey) ? resetPlayer(sheet, resetSheet, e.parameter.profileKey) : { ok: false, error: "Not authorized." };
   } else {
@@ -34,6 +38,16 @@ function doPost(e) {
     const payload = parsePayload(e);
     const sheet = getSheet();
     const resetSheet = getResetSheet();
+
+    if (payload.action === "login") {
+      return json(loginPlayer(sheet, resetSheet, payload.normalizedName, payload.profileKey));
+    }
+
+    if (payload.action === "resetPassword") {
+      return isAdmin(payload.adminKey)
+        ? json(resetPlayerPassword(sheet, payload.profileKey))
+        : json({ ok: false, error: "Not authorized." });
+    }
 
     if (payload.action === "load") {
       return json(loadPlayer(sheet, resetSheet, payload.profileKey));
@@ -85,9 +99,13 @@ function getSheet() {
       "boardJson",
       "progressJson",
       "createdAt",
-      "updatedAt"
+      "updatedAt",
+      "normalizedName",
+      "passwordResetAt"
     ]);
   }
+
+  ensurePlayerSheetHeaders(sheet);
 
   return sheet;
 }
@@ -121,15 +139,7 @@ function loadPlayer(sheet, resetSheet, profileKey) {
         ok: true,
         found: true,
         resetAt,
-        profile: {
-          version: 1,
-          profileKey: values[i][0],
-          playerName: values[i][1],
-          board: JSON.parse(values[i][2] || "[]"),
-          progress: JSON.parse(values[i][3] || "{}"),
-          createdAt: values[i][4],
-          updatedAt: values[i][5]
-        }
+        profile: profileFromRow(values[i])
       };
     }
   }
@@ -137,19 +147,59 @@ function loadPlayer(sheet, resetSheet, profileKey) {
   return { ok: true, found: false, resetAt };
 }
 
+function loginPlayer(sheet, resetSheet, normalizedName, profileKey) {
+  if (!normalizedName) {
+    return { ok: false, error: "Missing player name." };
+  }
+
+  if (!profileKey) {
+    return { ok: false, error: "Missing profile key." };
+  }
+
+  const values = sheet.getDataRange().getValues();
+  let matchedName = false;
+  let resettableRow = null;
+
+  for (let i = 1; i < values.length; i += 1) {
+    if (getRowNormalizedName(values[i]) !== normalizedName) continue;
+    matchedName = true;
+
+    if (values[i][0] === profileKey) {
+      return {
+        ok: true,
+        found: true,
+        resetAt: getResetAt(resetSheet, profileKey),
+        profile: profileFromRow(values[i])
+      };
+    }
+
+     if (isPasswordResetRow(values[i])) {
+      resettableRow = values[i];
+    }
+  }
+
+  if (resettableRow) {
+    return {
+      ok: true,
+      found: true,
+      resetAt: getResetAt(resetSheet, resettableRow[0]),
+      profile: profileFromRow(resettableRow)
+    };
+  }
+
+  if (matchedName) {
+    return { ok: false, error: "That player name is already claimed. Use the correct password to open that board." };
+  }
+
+  return { ok: true, found: false, resetAt: getResetAt(resetSheet, profileKey) };
+}
+
 function listPlayers(sheet) {
   const values = sheet.getDataRange().getValues();
   const players = [];
 
   for (let i = 1; i < values.length; i += 1) {
-    players.push({
-      profileKey: values[i][0],
-      playerName: values[i][1],
-      board: JSON.parse(values[i][2] || "[]"),
-      progress: JSON.parse(values[i][3] || "{}"),
-      createdAt: values[i][4],
-      updatedAt: values[i][5]
-    });
+    players.push(profileFromRow(values[i]));
   }
 
   return { ok: true, players };
@@ -208,25 +258,127 @@ function savePlayer(sheet, profile) {
 
   const values = sheet.getDataRange().getValues();
   const incomingProgress = profile.progress || {};
+  const normalizedName = normalizeName(profile.normalizedName || profile.playerName);
+
+  if (!normalizedName) {
+    throw new Error("Missing player name.");
+  }
+
   const row = [
     profile.profileKey,
     profile.playerName || "",
     JSON.stringify(profile.board || []),
     JSON.stringify(incomingProgress),
     profile.createdAt || new Date().toISOString(),
-    profile.updatedAt || new Date().toISOString()
+    profile.updatedAt || new Date().toISOString(),
+    normalizedName,
+    ""
   ];
+  let matchingRowNumber = 0;
+  let conflictingName = false;
+  let resettableRowNumber = 0;
 
   for (let i = 1; i < values.length; i += 1) {
     if (values[i][0] === profile.profileKey) {
-      row[3] = JSON.stringify(mergeProofProgress(JSON.parse(values[i][3] || "{}"), incomingProgress));
-      sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
-      removeDuplicateRows(sheet, profile.profileKey, i + 1);
-      return;
+      matchingRowNumber = i + 1;
+    } else if (getRowNormalizedName(values[i]) === normalizedName) {
+      if (isPasswordResetRow(values[i])) {
+        resettableRowNumber = i + 1;
+      } else {
+        conflictingName = true;
+      }
     }
   }
 
+  if (conflictingName) {
+    throw new Error("That player name is already claimed.");
+  }
+
+  if (matchingRowNumber) {
+    row[3] = JSON.stringify(mergeProofProgress(JSON.parse(values[matchingRowNumber - 1][3] || "{}"), incomingProgress));
+    sheet.getRange(matchingRowNumber, 1, 1, row.length).setValues([row]);
+    removeDuplicateRows(sheet, profile.profileKey, matchingRowNumber);
+    return;
+  }
+
+  if (resettableRowNumber) {
+    row[3] = JSON.stringify(mergeProofProgress(JSON.parse(values[resettableRowNumber - 1][3] || "{}"), incomingProgress));
+    sheet.getRange(resettableRowNumber, 1, 1, row.length).setValues([row]);
+    removeDuplicateRows(sheet, profile.profileKey, resettableRowNumber);
+    return;
+  }
+
   sheet.appendRow(row);
+}
+
+function ensurePlayerSheetHeaders(sheet) {
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 8)).getValues()[0];
+  const expected = [
+    "profileKey",
+    "playerName",
+    "boardJson",
+    "progressJson",
+    "createdAt",
+    "updatedAt",
+    "normalizedName",
+    "passwordResetAt"
+  ];
+
+  let changed = false;
+  expected.forEach((header, index) => {
+    if (headers[index] !== header) {
+      headers[index] = header;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    sheet.getRange(1, 1, 1, expected.length).setValues([headers.slice(0, expected.length)]);
+  }
+}
+
+function normalizeName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getRowNormalizedName(row) {
+  return normalizeName(row[6] || row[1]);
+}
+
+function isPasswordResetRow(row) {
+  return Boolean(row[7]);
+}
+
+function profileFromRow(row) {
+  return {
+    version: 1,
+    profileKey: row[0],
+    playerName: row[1],
+    board: JSON.parse(row[2] || "[]"),
+    progress: JSON.parse(row[3] || "{}"),
+    createdAt: row[4],
+    updatedAt: row[5],
+    normalizedName: getRowNormalizedName(row),
+    passwordResetAt: row[7] || ""
+  };
+}
+
+function resetPlayerPassword(sheet, profileKey) {
+  if (!profileKey) {
+    return { ok: false, error: "Missing profile key." };
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const passwordResetAt = new Date().toISOString();
+
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i][0] === profileKey) {
+      sheet.getRange(i + 1, 8).setValue(passwordResetAt);
+      return { ok: true, passwordResetAt };
+    }
+  }
+
+  return { ok: false, error: "Player profile was not found." };
 }
 
 function removeDuplicateRows(sheet, profileKey, keepRow) {

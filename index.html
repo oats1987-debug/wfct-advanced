@@ -457,7 +457,7 @@
 
     <section id="loginPanel" class="panel" aria-labelledby="login-title">
       <h2 id="login-title">Claim your card</h2>
-      <p id="loginPersistenceNote" class="note">Your first login creates a random board. Use the same name and optional password to reopen the same card and keep your checkmarks synced to the WFCT Advanced save sheet.</p>
+      <p id="loginPersistenceNote" class="note">Your first login creates a random board. Player names are unique and not case-sensitive, so use the same name and optional password to reopen the same card and keep your checkmarks synced to the WFCT Advanced save sheet.</p>
       <form id="loginForm" class="login-form">
         <label class="field">Player name <input id="playerName" autocomplete="username" required placeholder="Example: Oats"></label>
         <label class="field">Optional password <input id="playerPassword" type="password" autocomplete="current-password" placeholder="Optional"></label>
@@ -540,7 +540,7 @@
     let activeProfile = null;
 
     if (!REMOTE_SAVE_ENDPOINT) {
-      loginPersistenceNote.textContent = "Your first login creates a random board. Use the same name and optional password on this browser to reopen the same card and keep your checkmarks.";
+      loginPersistenceNote.textContent = "Your first login creates a random board. Player names are unique and not case-sensitive, so use the same name and optional password on this browser to reopen the same card and keep your checkmarks.";
       saveStatus.textContent = "Local save only.";
     }
 
@@ -631,14 +631,43 @@
         : { type: "challenge", ...chosen.shift() });
     }
 
-    function storageKey(profileKey) {
-      return `${STORAGE_PREFIX}${profileKey}`;
+    function normalizePlayerName(value) {
+      return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    function storageKey(normalizedName) {
+      return `${STORAGE_PREFIX}${normalizedName}`;
+    }
+
+    function readLocalProfile(normalizedName, profileKey) {
+      const nextKey = storageKey(normalizedName);
+      const nextProfile = JSON.parse(localStorage.getItem(nextKey) || "null");
+      if (nextProfile && nextProfile.profileKey === profileKey) {
+        return nextProfile;
+      }
+
+      const legacyKey = storageKey(profileKey);
+      const legacyProfile = JSON.parse(localStorage.getItem(legacyKey) || "null");
+      if (legacyProfile && legacyProfile.profileKey === profileKey) {
+        localStorage.setItem(nextKey, JSON.stringify({
+          ...legacyProfile,
+          normalizedName: normalizedName
+        }));
+        localStorage.removeItem(legacyKey);
+        return {
+          ...legacyProfile,
+          normalizedName: normalizedName
+        };
+      }
+
+      return null;
     }
 
     function saveProfile() {
       if (!activeProfile) return;
       activeProfile.updatedAt = new Date().toISOString();
-      localStorage.setItem(storageKey(activeProfile.profileKey), JSON.stringify(activeProfile));
+      activeProfile.normalizedName = normalizePlayerName(activeProfile.normalizedName || activeProfile.playerName);
+      localStorage.setItem(storageKey(activeProfile.normalizedName), JSON.stringify(activeProfile));
       saveStatus.textContent = "Saved locally.";
       syncProfile(activeProfile);
     }
@@ -655,12 +684,14 @@
       }
     }
 
-    async function loadRemoteProfile(profileKey) {
+    async function loginRemoteProfile(normalizedName, profileKey) {
       if (!REMOTE_SAVE_ENDPOINT) return null;
       try {
         loginMessage.textContent = "Checking cloud save...";
-        const data = await jsonpRemote({ action: "load", profileKey });
-        if (!data.ok) return null;
+        const data = await jsonpRemote({ action: "login", normalizedName, profileKey });
+        if (!data.ok) {
+          return { error: data.error || "Could not open your board." };
+        }
         return {
           profile: data.found ? data.profile : null,
           resetAt: data.resetAt || ""
@@ -739,7 +770,7 @@
       const remoteProfile = remoteResult ? remoteResult.profile : null;
 
       if (resetAt && localTime && localTime < resetAt) {
-        localStorage.removeItem(storageKey(localProfile.profileKey));
+        localStorage.removeItem(storageKey(localProfile.normalizedName || normalizePlayerName(localProfile.playerName)));
         localProfile = null;
       }
 
@@ -843,6 +874,7 @@
       try {
         await challengeLoad;
         const playerName = playerNameInput.value.trim().replace(/\s+/g, " ");
+        const normalizedName = normalizePlayerName(playerName);
         if (!playerName) {
           loginMessage.textContent = "Please enter a player name.";
           return;
@@ -851,19 +883,26 @@
           loginMessage.textContent = "The challenge sheet needs at least 24 challenges to make a bingo card.";
           return;
         }
-        const profileKey = await digest(`${playerName.toLowerCase()}\n${passwordInput.value}`);
-        const localProfile = JSON.parse(localStorage.getItem(storageKey(profileKey)) || "null");
-        const remoteProfile = await loadRemoteProfile(profileKey);
+        const profileKey = await digest(`${normalizedName}\n${passwordInput.value}`);
+        const localProfile = readLocalProfile(normalizedName, profileKey);
+        const remoteProfile = await loginRemoteProfile(normalizedName, profileKey);
+        if (remoteProfile && remoteProfile.error) {
+          loginMessage.textContent = remoteProfile.error;
+          return;
+        }
         const existing = chooseNewestProfile(remoteProfile, localProfile);
         activeProfile = existing || {
           version: 1,
           profileKey,
+          normalizedName,
           playerName,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           board: makeBoard(allChallenges),
           progress: {}
         };
+        activeProfile.profileKey = profileKey;
+        activeProfile.normalizedName = normalizedName;
         activeProfile.playerName = playerName;
         saveProfile();
         showBoard();
@@ -910,7 +949,10 @@
         saveStatus.textContent = "Uploading proof...";
         const dataUrl = await readFileAsDataURL(file);
         activeProfile.progress[proofKey] = "Upload sent";
-        localStorage.setItem(storageKey(activeProfile.profileKey), JSON.stringify(activeProfile));
+        localStorage.setItem(
+          storageKey(activeProfile.normalizedName || normalizePlayerName(activeProfile.playerName)),
+          JSON.stringify(activeProfile)
+        );
         postToRemote({
           action: "uploadProof",
           profileKey: activeProfile.profileKey,

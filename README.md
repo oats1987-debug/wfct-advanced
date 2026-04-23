@@ -7,9 +7,10 @@ Interactive bingo-card version of the WFCT challenge site.
 - Loads challenge data from the same published Google Sheet CSV as the original WFCT challenge page.
 - Creates a randomized 5x5 card for each player, with a free center square.
 - Stores each player's board and checkbox progress locally and syncs them through the configured Google Apps Script save endpoint.
+- Treats player names as unique and case-insensitive, so `Oats` and `oats` resolve to the same board and the wrong password is rejected.
 - Tracks normal clears, power-up clears, and completed bingo lines.
 - Lets players upload one screenshot proof for each challenge tile.
-- Provides an organizer admin page for viewing saved boards and resetting a player.
+- Provides an organizer admin page for viewing saved boards, clearing a player's password, and resetting a player.
 
 ## Persistence Note
 
