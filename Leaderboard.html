@@ -312,7 +312,7 @@
     <section class="hero">
       <p class="eyebrow">WFCT Progress Board</p>
       <h1>Leaderboard</h1>
-      <p class="note">This page is read-only. It pulls current player standings from the WFCT Advanced save sheet without touching saved boards, passwords, resets, or progress.</p>
+      <p class="note">Track the current WFCT standings by powered-up clears, total squares completed, and bingo lines earned. Use this page to quickly spot frontrunners and milestone contenders across the event.</p>
       <p id="message" class="message" role="status">Loading leaderboard...</p>
     </section>
 
@@ -461,8 +461,8 @@
 
         const generatedAt = data.generatedAt ? new Date(data.generatedAt) : null;
         message.textContent = generatedAt && !Number.isNaN(generatedAt.getTime())
-          ? `Leaderboard refreshed from read-only save data at ${generatedAt.toLocaleString()}.`
-          : "Leaderboard refreshed from read-only save data.";
+          ? `Leaderboard refreshed at ${generatedAt.toLocaleString()}.`
+          : "Leaderboard refreshed.";
       } catch (error) {
         console.warn(error);
         message.textContent = error.message || "Could not load leaderboard data.";
