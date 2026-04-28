@@ -15,6 +15,8 @@ function doGet(e) {
     result = loginPlayer(sheet, resetSheet, e.parameter.normalizedName, e.parameter.profileKey);
   } else if (action === "load") {
     result = loadPlayer(sheet, resetSheet, e.parameter.profileKey);
+  } else if (action === "assignments") {
+    result = listAssignments(sheet);
   } else if (action === "list") {
     result = isAdmin(e.parameter.adminKey) ? listPlayers(sheet) : { ok: false, error: "Not authorized." };
   } else if (action === "resetPassword") {
@@ -203,6 +205,39 @@ function listPlayers(sheet) {
   }
 
   return { ok: true, players };
+}
+
+function listAssignments(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const assignments = {};
+
+  for (let i = 1; i < values.length; i += 1) {
+    const player = profileFromRow(values[i]);
+    const seen = {};
+
+    player.board.forEach((cell) => {
+      if (!cell || cell.type !== "challenge" || !cell.sourceIndex) return;
+      const challengeNumber = String(cell.sourceIndex);
+      if (seen[challengeNumber]) return;
+      seen[challengeNumber] = true;
+
+      if (!assignments[challengeNumber]) {
+        assignments[challengeNumber] = [];
+      }
+
+      assignments[challengeNumber].push(player.playerName || "Unnamed Player");
+    });
+  }
+
+  Object.keys(assignments).forEach((challengeNumber) => {
+    assignments[challengeNumber].sort();
+  });
+
+  return {
+    ok: true,
+    assignments,
+    generatedAt: new Date().toISOString()
+  };
 }
 
 function resetPlayer(sheet, resetSheet, profileKey) {
