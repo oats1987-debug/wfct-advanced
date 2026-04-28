@@ -17,6 +17,7 @@
       --pink: #ff7adf;
       --shadow: 0 26px 70px rgba(0, 0, 0, .48);
       --radius: 28px;
+      --rainbow-angle: 120deg;
     }
 
     * { box-sizing: border-box; }
@@ -60,7 +61,8 @@
 
     .hero,
     .panel,
-    .board {
+    .board,
+    .callout {
       border: 1px solid rgba(255, 255, 255, .18);
       background:
         linear-gradient(135deg, rgba(255, 213, 106, .14), transparent 36%),
@@ -78,6 +80,17 @@
 
     .panel {
       margin-top: 22px;
+    }
+
+    .callout {
+      margin-top: 22px;
+      padding: 20px 22px;
+      border-radius: 24px;
+      border: 2px solid transparent;
+      background:
+        linear-gradient(rgba(34, 8, 8, .94), rgba(22, 8, 8, .9)) padding-box,
+        linear-gradient(135deg, #ffb1b1, #ff5f5f, #cf2020) border-box;
+      box-shadow: var(--shadow);
     }
 
     .eyebrow {
@@ -126,6 +139,27 @@
       font-size: clamp(1rem, 2vw, 1.12rem);
     }
 
+    .callout strong,
+    .callout span {
+      display: block;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .callout strong {
+      color: #ff8b8b;
+      font-size: .82rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .callout span {
+      margin-top: 8px;
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      line-height: 1.5;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
     .message {
       margin-top: 20px;
       padding: 14px 16px;
@@ -152,7 +186,8 @@
       border: 2px solid transparent;
       background:
         linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box,
-        conic-gradient(from 120deg, #ff4fd8, #56e3ff, #9dff74, #ffd56a, #ff4fd8) border-box;
+        conic-gradient(from var(--rainbow-angle), #ff4fd8, #56e3ff, #9dff74, #ffd56a, #ff4fd8) border-box;
+      animation: rainbow-spin 14s linear infinite;
     }
 
     .board h2 {
@@ -280,6 +315,17 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    @property --rainbow-angle {
+      syntax: "<angle>";
+      inherits: false;
+      initial-value: 120deg;
+    }
+
+    @keyframes rainbow-spin {
+      from { --rainbow-angle: 120deg; }
+      to { --rainbow-angle: 480deg; }
+    }
+
     @media (max-width: 1024px) {
       .boards,
       .lines-grid {
@@ -314,6 +360,11 @@
       <h1>Leaderboard</h1>
       <p class="note">Track the current WFCT standings by powered-up clears, total squares completed, and bingo lines earned. Use this page to quickly spot frontrunners and milestone contenders across the event.</p>
       <p id="message" class="message" role="status">Loading leaderboard...</p>
+    </section>
+
+    <section class="callout" aria-label="Reward reminder">
+      <strong>Reward Reminder</strong>
+      <span>To earn the maximum event rewards, you only need to complete 3 lines or 3 powered-up lines. Everything on this leaderboard is just for fun for players who want to push beyond the normal challenge.</span>
     </section>
 
     <section class="panel" aria-labelledby="top-title">
