@@ -416,9 +416,9 @@
     }
 
     function renderTopFive(target, players, key, label) {
-      const top = sortPlayers(players, key).slice(0, 5);
+      const top = sortPlayers(players, key).filter((player) => Number(player[key] || 0) > 0).slice(0, 5);
       if (!top.length) {
-        target.innerHTML = `<span class="empty">No players yet</span>`;
+        target.innerHTML = `<span class="empty">To Be Determined...</span>`;
         return;
       }
 
@@ -437,7 +437,7 @@
         .map((player) => player.playerName);
 
       if (!names.length) {
-        target.innerHTML = `<span class="empty">No contenders yet</span>`;
+        target.innerHTML = `<span class="empty">To Be Determined...</span>`;
         return;
       }
 
