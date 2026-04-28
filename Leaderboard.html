@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wonderous FC Tales Leaderboard</title>
+  <style>
+    :root {
+      --ink: #fff8e7;
+      --muted: rgba(255, 248, 231, .72);
+      --glass: rgba(12, 18, 24, .74);
+      --glass-strong: rgba(14, 18, 24, .88);
+      --line: rgba(255, 248, 231, .24);
+      --gold: #ffd56a;
+      --blue: #7ddfff;
+      --green: #a9ff8f;
+      --pink: #ff7adf;
+      --shadow: 0 26px 70px rgba(0, 0, 0, .48);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #091014; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255, 216, 105, .3), transparent 25rem),
+        linear-gradient(180deg, rgba(4, 8, 12, .38), rgba(4, 8, 12, .9)),
+        url("F95kIyFJBfnXUKrHOXWKssgA5Q.jpg") center top / cover fixed;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    body::before {
+      background:
+        linear-gradient(90deg, rgba(9, 16, 20, .88), transparent 21%, transparent 79%, rgba(9, 16, 20, .88)),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 14px);
+      mix-blend-mode: screen;
+    }
+
+    body::after { background: radial-gradient(circle at 50% 50%, transparent 0 48%, rgba(2, 4, 7, .68) 100%); }
+
+    .page {
+      width: min(1240px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 46px 0 72px;
+    }
+
+    .hero,
+    .panel,
+    .board {
+      border: 1px solid rgba(255, 255, 255, .18);
+      background:
+        linear-gradient(135deg, rgba(255, 213, 106, .14), transparent 36%),
+        linear-gradient(180deg, rgba(8, 12, 18, .78), rgba(8, 12, 18, .56));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+      animation: rise-in 700ms ease both;
+    }
+
+    .hero,
+    .panel {
+      border-radius: var(--radius);
+      padding: clamp(22px, 4vw, 42px);
+    }
+
+    .panel {
+      margin-top: 22px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      margin: 0 0 16px;
+      padding: 9px 14px;
+      border: 1px solid rgba(255, 213, 106, .42);
+      border-radius: 999px;
+      color: var(--gold);
+      background: rgba(255, 213, 106, .1);
+      font: 700 .78rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.7rem, 7vw, 6rem);
+      line-height: .9;
+      letter-spacing: -.07em;
+      text-wrap: balance;
+      text-shadow: 0 8px 34px rgba(0, 0, 0, .5);
+    }
+
+    h2,
+    h3,
+    .note,
+    .message,
+    .meta,
+    .name-pill,
+    .count-pill,
+    .empty {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .note,
+    .message,
+    .meta {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .note {
+      max-width: 860px;
+      margin: 18px 0 0;
+      font-size: clamp(1rem, 2vw, 1.12rem);
+    }
+
+    .message {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(9, 16, 20, .54);
+    }
+
+    .boards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .board {
+      padding: 18px;
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(12, 18, 24, .88), rgba(12, 18, 24, .62));
+    }
+
+    .board.rainbow {
+      border: 2px solid transparent;
+      background:
+        linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box,
+        conic-gradient(from 120deg, #ff4fd8, #56e3ff, #9dff74, #ffd56a, #ff4fd8) border-box;
+    }
+
+    .board h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      letter-spacing: -.03em;
+    }
+
+    .meta {
+      margin: 8px 0 0;
+      font-size: .92rem;
+    }
+
+    .ranking {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0 0;
+    }
+
+    .entry {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .rank {
+      display: grid;
+      place-items: center;
+      min-height: 40px;
+      border-radius: 14px;
+      color: #181108;
+      background:
+        radial-gradient(circle at 30% 25%, #fff9c7, transparent 34%),
+        linear-gradient(135deg, #ffe28b, #d88920);
+      font: 900 .96rem/1 "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    .name-pill {
+      min-width: 0;
+      font-size: .96rem;
+      font-weight: 900;
+      letter-spacing: .01em;
+    }
+
+    .count-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border: 1px solid rgba(255, 248, 231, .18);
+      border-radius: 999px;
+      padding: 0 14px;
+      color: var(--gold);
+      background: rgba(255, 255, 255, .08);
+      font-size: .8rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .lines-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .line-card {
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 22px;
+      background:
+        linear-gradient(135deg, rgba(255, 213, 106, .12), transparent 36%),
+        linear-gradient(180deg, rgba(8, 12, 18, .78), rgba(8, 12, 18, .56));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+    }
+
+    .line-card h3 {
+      margin: 0;
+      font-size: 1.18rem;
+      letter-spacing: -.03em;
+    }
+
+    .names {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .name-chip,
+    .empty {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: .84rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .name-chip {
+      border: 1px solid rgba(169, 255, 143, .46);
+      color: var(--ink);
+      background: rgba(169, 255, 143, .1);
+    }
+
+    .empty {
+      border: 1px solid rgba(255, 248, 231, .18);
+      color: var(--muted);
+      background: rgba(255, 255, 255, .06);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    @keyframes rise-in {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 1024px) {
+      .boards,
+      .lines-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .entry {
+        grid-template-columns: 40px minmax(0, 1fr);
+      }
+
+      .count-pill {
+        grid-column: 1 / -1;
+        justify-self: start;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">WFCT Progress Board</p>
+      <h1>Leaderboard</h1>
+      <p class="note">This page is read-only. It pulls current player standings from the WFCT Advanced save sheet without touching saved boards, passwords, resets, or progress.</p>
+      <p id="message" class="message" role="status">Loading leaderboard...</p>
+    </section>
+
+    <section class="panel" aria-labelledby="top-title">
+      <h2 id="top-title">Top Contenders</h2>
+      <div class="boards">
+        <article class="board rainbow">
+          <h2>Most Powered-Up Squares Completed</h2>
+          <p class="meta">Top 5 contenders by completed power-up squares.</p>
+          <div id="poweredTop" class="ranking"></div>
+        </article>
+        <article class="board">
+          <h2>Most Squares Completed</h2>
+          <p class="meta">Top 5 contenders by completed squares, whether normal or power-up.</p>
+          <div id="squaresTop" class="ranking"></div>
+        </article>
+        <article class="board">
+          <h2>Most Lines Completed</h2>
+          <p class="meta">Top 5 contenders by total completed lines.</p>
+          <div id="linesTop" class="ranking"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="milestones-title">
+      <h2 id="milestones-title">Line Milestones</h2>
+      <div class="lines-grid">
+        <article class="line-card">
+          <h3>3 Lines Completed</h3>
+          <div id="threeLines" class="names"></div>
+        </article>
+        <article class="line-card">
+          <h3>2 Lines Completed</h3>
+          <div id="twoLines" class="names"></div>
+        </article>
+        <article class="line-card">
+          <h3>1 Line Completed</h3>
+          <div id="oneLine" class="names"></div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const REMOTE_SAVE_ENDPOINT = "https://script.google.com/macros/s/AKfycbwwnRAozSexZI_g65iSbVgIoXnsmTXy2ql6y_aFEN3e7hqvCYsq6cMUgAJktNtNacY6/exec";
+
+    const message = document.querySelector("#message");
+    const poweredTop = document.querySelector("#poweredTop");
+    const squaresTop = document.querySelector("#squaresTop");
+    const linesTop = document.querySelector("#linesTop");
+    const threeLines = document.querySelector("#threeLines");
+    const twoLines = document.querySelector("#twoLines");
+    const oneLine = document.querySelector("#oneLine");
+
+    function escapeHTML(value) {
+      return String(value || "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function jsonpRemote(params) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `wfctLeaderboard_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement("script");
+        const timeout = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Leaderboard request timed out."));
+        }, 10000);
+
+        function cleanup() {
+          window.clearTimeout(timeout);
+          delete window[callbackName];
+          script.remove();
+        }
+
+        window[callbackName] = (data) => {
+          cleanup();
+          resolve(data);
+        };
+
+        const url = new URL(REMOTE_SAVE_ENDPOINT);
+        Object.entries({ ...params, callback: callbackName }).forEach(([key, value]) => {
+          url.searchParams.set(key, value);
+        });
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("Leaderboard script failed."));
+        };
+        script.src = url.toString();
+        document.body.append(script);
+      });
+    }
+
+    function sortPlayers(players, key) {
+      return [...players].sort((a, b) => {
+        const countDiff = (b[key] || 0) - (a[key] || 0);
+        if (countDiff) return countDiff;
+        return String(a.playerName || "").localeCompare(String(b.playerName || ""));
+      });
+    }
+
+    function renderTopFive(target, players, key, label) {
+      const top = sortPlayers(players, key).slice(0, 5);
+      if (!top.length) {
+        target.innerHTML = `<span class="empty">No players yet</span>`;
+        return;
+      }
+
+      target.innerHTML = top.map((player, index) => `
+        <article class="entry">
+          <div class="rank">#${index + 1}</div>
+          <div class="name-pill">${escapeHTML(player.playerName)}</div>
+          <div class="count-pill">${player[key]} ${label}</div>
+        </article>
+      `).join("");
+    }
+
+    function renderLineGroup(target, players, lineCount) {
+      const names = sortPlayers(players, "completedLines")
+        .filter((player) => player.completedLines === lineCount)
+        .map((player) => player.playerName);
+
+      if (!names.length) {
+        target.innerHTML = `<span class="empty">No contenders yet</span>`;
+        return;
+      }
+
+      target.innerHTML = names.map((name) => (
+        `<span class="name-chip">${escapeHTML(name)}</span>`
+      )).join("");
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const data = await jsonpRemote({ action: "leaderboard" });
+        if (!data.ok) throw new Error(data.error || "Could not load leaderboard data.");
+
+        const players = Array.isArray(data.players) ? data.players : [];
+        renderTopFive(poweredTop, players, "poweredSquares", "powered");
+        renderTopFive(squaresTop, players, "completedSquares", "squares");
+        renderTopFive(linesTop, players, "completedLines", "lines");
+        renderLineGroup(threeLines, players, 3);
+        renderLineGroup(twoLines, players, 2);
+        renderLineGroup(oneLine, players, 1);
+
+        const generatedAt = data.generatedAt ? new Date(data.generatedAt) : null;
+        message.textContent = generatedAt && !Number.isNaN(generatedAt.getTime())
+          ? `Leaderboard refreshed from read-only save data at ${generatedAt.toLocaleString()}.`
+          : "Leaderboard refreshed from read-only save data.";
+      } catch (error) {
+        console.warn(error);
+        message.textContent = error.message || "Could not load leaderboard data.";
+      }
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>

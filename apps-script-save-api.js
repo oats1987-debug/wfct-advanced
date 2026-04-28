@@ -15,6 +15,8 @@ function doGet(e) {
     result = loginPlayer(sheet, resetSheet, e.parameter.normalizedName, e.parameter.profileKey);
   } else if (action === "load") {
     result = loadPlayer(sheet, resetSheet, e.parameter.profileKey);
+  } else if (action === "leaderboard") {
+    result = listLeaderboard(sheet);
   } else if (action === "assignments") {
     result = listAssignments(sheet);
   } else if (action === "list") {
@@ -240,6 +242,27 @@ function listAssignments(sheet) {
   };
 }
 
+function listLeaderboard(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const players = [];
+
+  for (let i = 1; i < values.length; i += 1) {
+    const player = profileFromRow(values[i]);
+    players.push({
+      playerName: player.playerName || "Unnamed Player",
+      poweredSquares: countPoweredSquares(player),
+      completedSquares: countCompletedSquares(player),
+      completedLines: countCompletedLines(player)
+    });
+  }
+
+  return {
+    ok: true,
+    players,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 function resetPlayer(sheet, resetSheet, profileKey) {
   if (!profileKey) {
     return { ok: false, error: "Missing profile key." };
@@ -396,6 +419,71 @@ function profileFromRow(row) {
     normalizedName: getRowNormalizedName(row),
     passwordResetAt: row[7] || ""
   };
+}
+
+function countPoweredSquares(profile) {
+  let count = 0;
+  const progress = profile.progress || {};
+
+  for (let i = 0; i < profile.board.length; i += 1) {
+    if (profile.board[i] && profile.board[i].type === "challenge" && progress["power-" + i]) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function countCompletedSquares(profile) {
+  let count = 0;
+  const progress = profile.progress || {};
+
+  for (let i = 0; i < profile.board.length; i += 1) {
+    const cell = profile.board[i];
+    if (!cell) continue;
+    if (cell.type === "free") {
+      count += 1;
+      continue;
+    }
+
+    if (progress["normal-" + i] || progress["power-" + i]) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function countCompletedLines(profile) {
+  const progress = profile.progress || {};
+  const complete = [];
+
+  for (let i = 0; i < profile.board.length; i += 1) {
+    const cell = profile.board[i];
+    complete.push(Boolean(cell && (cell.type === "free" || progress["normal-" + i] || progress["power-" + i])));
+  }
+
+  const lines = [
+    [0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14], [15, 16, 17, 18, 19], [20, 21, 22, 23, 24],
+    [0, 5, 10, 15, 20], [1, 6, 11, 16, 21], [2, 7, 12, 17, 22], [3, 8, 13, 18, 23], [4, 9, 14, 19, 24],
+    [0, 6, 12, 18, 24], [4, 8, 12, 16, 20]
+  ];
+
+  let count = 0;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (everyLineIndexComplete(lines[i], complete)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function everyLineIndexComplete(line, complete) {
+  for (let i = 0; i < line.length; i += 1) {
+    if (!complete[line[i]]) return false;
+  }
+  return true;
 }
 
 function resetPlayerPassword(sheet, profileKey) {
