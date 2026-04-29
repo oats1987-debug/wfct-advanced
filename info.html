@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wonderous FC Tales Info</title>
+  <style>
+    :root {
+      --ink: #fff8e7;
+      --muted: rgba(255, 248, 231, .72);
+      --glass: rgba(12, 18, 24, .74);
+      --glass-strong: rgba(14, 18, 24, .88);
+      --line: rgba(255, 248, 231, .24);
+      --gold: #ffd56a;
+      --blue: #7ddfff;
+      --green: #a9ff8f;
+      --pink: #ff7adf;
+      --shadow: 0 26px 70px rgba(0, 0, 0, .48);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #091014; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255, 216, 105, .3), transparent 25rem),
+        linear-gradient(180deg, rgba(4, 8, 12, .38), rgba(4, 8, 12, .9)),
+        url("F95kIyFJBfnXUKrHOXWKssgA5Q.jpg") center top / cover fixed;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    body::before {
+      background:
+        linear-gradient(90deg, rgba(9, 16, 20, .88), transparent 21%, transparent 79%, rgba(9, 16, 20, .88)),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 14px);
+      mix-blend-mode: screen;
+    }
+
+    body::after { background: radial-gradient(circle at 50% 50%, transparent 0 48%, rgba(2, 4, 7, .68) 100%); }
+
+    .page {
+      width: min(1240px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 46px 0 72px;
+    }
+
+    .hero,
+    .panel,
+    .card,
+    .raffle-card,
+    .total {
+      border: 1px solid rgba(255, 255, 255, .18);
+      background:
+        linear-gradient(135deg, rgba(255, 213, 106, .14), transparent 36%),
+        linear-gradient(180deg, rgba(8, 12, 18, .78), rgba(8, 12, 18, .56));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+      animation: rise-in 700ms ease both;
+    }
+
+    .hero,
+    .panel {
+      border-radius: var(--radius);
+      padding: clamp(22px, 4vw, 42px);
+    }
+
+    .panel {
+      margin-top: 22px;
+    }
+
+    .top-links {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .rainbow-link {
+      display: grid;
+      min-height: 58px;
+      place-items: center;
+      border: 2px solid transparent;
+      border-radius: 18px;
+      padding: 12px 16px;
+      color: var(--ink);
+      background:
+        linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box,
+        conic-gradient(from 120deg, #ff4fd8, #56e3ff, #9dff74, #ffd56a, #ff4fd8) border-box;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, .34);
+      font: 900 .82rem/1.2 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .08em;
+      text-align: center;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      margin: 0 0 16px;
+      padding: 9px 14px;
+      border: 1px solid rgba(255, 213, 106, .42);
+      border-radius: 999px;
+      color: var(--gold);
+      background: rgba(255, 213, 106, .1);
+      font: 700 .78rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.7rem, 7vw, 6rem);
+      line-height: .9;
+      letter-spacing: -.07em;
+      text-wrap: balance;
+      text-shadow: 0 8px 34px rgba(0, 0, 0, .5);
+    }
+
+    h2,
+    h3,
+    .note,
+    .summary,
+    .step-list,
+    .prize,
+    .total,
+    a {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2.2rem);
+      letter-spacing: -.04em;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: -.02em;
+    }
+
+    .note,
+    .summary {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .note {
+      max-width: 860px;
+      margin: 18px 0 0;
+      font-size: clamp(1rem, 2vw, 1.12rem);
+    }
+
+    .quick-grid,
+    .raffles,
+    .rules-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .quick-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .raffles {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .rules-grid {
+      grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr);
+      align-items: start;
+    }
+
+    .card,
+    .raffle-card,
+    .total {
+      border-radius: 22px;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(12, 18, 24, .88), rgba(12, 18, 24, .62));
+    }
+
+    .card strong,
+    .raffle-card strong,
+    .total strong {
+      display: block;
+      color: var(--gold);
+      font: 900 .78rem/1 "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .card span,
+    .raffle-card span,
+    .total span {
+      display: block;
+      margin-top: 10px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.4;
+      font-weight: 800;
+    }
+
+    .raffle-card.power {
+      border: 2px solid transparent;
+      background:
+        linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box,
+        conic-gradient(from 120deg, #ff4fd8, #56e3ff, #9dff74, #ffd56a, #ff4fd8) border-box;
+    }
+
+    .raffle-card .prize {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .94rem;
+      line-height: 1.45;
+    }
+
+    .step-list {
+      display: grid;
+      gap: 10px;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: steps;
+    }
+
+    .step-list li {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .06);
+      color: var(--muted);
+      line-height: 1.45;
+      counter-increment: steps;
+    }
+
+    .step-list li::before {
+      content: counter(steps);
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      color: #181108;
+      background:
+        radial-gradient(circle at 30% 25%, #fff9c7, transparent 34%),
+        linear-gradient(135deg, #ffe28b, #d88920);
+      font-weight: 900;
+    }
+
+    .step-list li.warning::before {
+      color: #2a0909;
+      background: linear-gradient(135deg, #ffc3c3, #ff6f6f);
+    }
+
+    .summary {
+      margin: 14px 0 0;
+      font-size: 1rem;
+    }
+
+    .total {
+      margin-top: 16px;
+      border-color: rgba(169, 255, 143, .38);
+      background:
+        linear-gradient(135deg, rgba(169, 255, 143, .12), transparent 38%),
+        linear-gradient(180deg, rgba(12, 18, 24, .88), rgba(12, 18, 24, .62));
+    }
+
+    .total strong {
+      color: var(--green);
+    }
+
+    a {
+      color: var(--gold);
+      font-weight: 900;
+      text-decoration-color: rgba(255, 213, 106, .48);
+      text-underline-offset: 3px;
+    }
+
+    @keyframes rise-in {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 960px) {
+      body { background-attachment: scroll; }
+      .top-links,
+      .quick-grid,
+      .raffles,
+      .rules-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <nav class="top-links" aria-label="Important links">
+      <a class="rainbow-link" href="https://oats1987-debug.github.io/wfct-advanced/" target="_blank" rel="noopener">Accept/Visit Your Book</a>
+      <a class="rainbow-link" href="https://oats1987-debug.github.io/wfct-advanced/challenges.html" target="_blank" rel="noopener">Check Who Has What Challenges</a>
+      <a class="rainbow-link" href="https://oats1987-debug.github.io/wfct-advanced/Leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+    </nav>
+
+    <section class="hero">
+      <p class="eyebrow">Event Guide</p>
+      <h1>Wonderous FC Tales Info</h1>
+      <div class="quick-grid">
+        <div class="card">
+          <strong>Timeline</strong>
+          <span>4 weeks to complete your book, then 1 week to gather results and provide prizes.</span>
+        </div>
+        <div class="card">
+          <strong>Participation</strong>
+          <span>Complete at least 1 challenge on your board to earn a 200k participation trophy.</span>
+        </div>
+        <div class="card">
+          <strong>Power Ups</strong>
+          <span>Finish 1 full powered up line or more to enter the separate powered up raffle.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <p class="eyebrow">Raffles</p>
+      <h2>How Prize Entries Work</h2>
+      <p class="summary">Normal line raffles are tiered. Higher line totals enter every lower tier too, but each person can only win once. The drawings happen in order: 3 line raffle, then 2 line raffle, then 1 line raffle.</p>
+      <div class="raffles">
+        <article class="raffle-card power">
+          <strong>Power Up Raffle</strong>
+          <span>1+ powered up line</span>
+          <div class="prize">2 winners: $25 Mog Station mount OR Genie Lamp mount.</div>
+        </article>
+        <article class="raffle-card">
+          <strong>3 Line Raffle</strong>
+          <span>3+ normal lines</span>
+          <div class="prize">2 winners: 25 mil each. Also entered in the 2 line and 1 line raffles unless you win here.</div>
+        </article>
+        <article class="raffle-card">
+          <strong>2 Line Raffle</strong>
+          <span>2+ normal lines</span>
+          <div class="prize">4 winners: 15 mil each. Also entered in the 1 line raffle unless you win here.</div>
+        </article>
+        <article class="raffle-card">
+          <strong>1 Line Raffle</strong>
+          <span>1+ normal line</span>
+          <div class="prize">6 winners: 5 mil each.</div>
+        </article>
+      </div>
+      <div class="total">
+        <strong>Total Prize Pool</strong>
+        <span>Over 140 mil in gil prizes!</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <p class="eyebrow">The Game</p>
+      <h2>How WFCT Works</h2>
+      <div class="rules-grid">
+        <article class="card">
+          <strong>The Goal</strong>
+          <span>Each person gets a different card filled with FFXIV content. Team up with different participants to find matching content, complete squares, and build bingo lines.</span>
+        </article>
+        <article class="card">
+          <strong>Powered Squares</strong>
+          <span>Squares have upgraded versions that power them up. A full powered up line puts you into the enhanced powered up raffle.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <p class="eyebrow">The Book</p>
+      <h2>Using Your Card</h2>
+      <ol class="step-list">
+        <li><a href="https://oats1987-debug.github.io/wfct-advanced/" target="_blank" rel="noopener">Accept a book</a></li>
+        <li>Enter your character name and a password you will remember. Use something easy that you do not use anywhere else.</li>
+        <li>Your randomized bingo card will be filled with events.</li>
+        <li>Do the content with another person who has the same content.</li>
+        <li>Screenshot yourself completing it.</li>
+        <li>Check the normal or power up box, depending on which version you did.</li>
+        <li>Upload your screenshot proof.</li>
+        <li class="warning">You can reset your entire card 1 time if you do not like your tiles. This resets everything and cannot be undone.</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>
