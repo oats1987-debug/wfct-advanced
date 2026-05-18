@@ -528,7 +528,10 @@
 
     function renderJourneyList(target, players) {
       const started = sortPlayers(players, "completedSquares")
-        .filter((player) => Number(player.completedSquares || 0) >= 1);
+        .filter((player) => (
+          Number(player.completedSquares || 0) >= 1 &&
+          Number(player.completedLines || 0) === 0
+        ));
 
       if (!started.length) {
         target.innerHTML = `<span class="empty">To Be Determined...</span>`;
