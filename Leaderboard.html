@@ -284,6 +284,29 @@
       margin-top: 16px;
     }
 
+    .journey-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .journey-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .journey-entry .name-pill {
+      overflow-wrap: anywhere;
+    }
+
     .name-chip,
     .empty {
       display: inline-flex;
@@ -405,6 +428,11 @@
         </article>
       </div>
     </section>
+
+    <section class="panel" aria-labelledby="journey-title">
+      <h2 id="journey-title">Their Journey Has Begun</h2>
+      <div id="journeyList" class="journey-list"></div>
+    </section>
   </main>
 
   <script>
@@ -417,6 +445,7 @@
     const threeLines = document.querySelector("#threeLines");
     const twoLines = document.querySelector("#twoLines");
     const oneLine = document.querySelector("#oneLine");
+    const journeyList = document.querySelector("#journeyList");
 
     function escapeHTML(value) {
       return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -497,6 +526,27 @@
       )).join("");
     }
 
+    function renderJourneyList(target, players) {
+      const started = sortPlayers(players, "completedSquares")
+        .filter((player) => Number(player.completedSquares || 0) >= 1);
+
+      if (!started.length) {
+        target.innerHTML = `<span class="empty">To Be Determined...</span>`;
+        return;
+      }
+
+      target.innerHTML = started.map((player) => {
+        const count = Number(player.completedSquares || 0);
+        const label = count === 1 ? "square" : "squares";
+        return `
+          <article class="journey-entry">
+            <div class="name-pill">${escapeHTML(player.playerName)}</div>
+            <div class="count-pill">${count} ${label}</div>
+          </article>
+        `;
+      }).join("");
+    }
+
     async function loadLeaderboard() {
       try {
         const data = await jsonpRemote({ action: "leaderboard" });
@@ -509,6 +559,7 @@
         renderLineGroup(threeLines, players, 3);
         renderLineGroup(twoLines, players, 2);
         renderLineGroup(oneLine, players, 1);
+        renderJourneyList(journeyList, players);
 
         const generatedAt = data.generatedAt ? new Date(data.generatedAt) : null;
         message.textContent = generatedAt && !Number.isNaN(generatedAt.getTime())
