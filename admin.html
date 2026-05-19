@@ -153,6 +153,16 @@
       background: linear-gradient(135deg, #ffc3c3, #ff8c8c);
     }
 
+    button.proof-open-all {
+      min-height: 34px;
+      border: 1px solid rgba(255, 213, 106, .4);
+      border-radius: 999px;
+      padding: 0 10px;
+      color: var(--gold);
+      background: rgba(255, 213, 106, .1);
+      font-size: .62rem;
+    }
+
     .players {
       display: grid;
       gap: 22px;
@@ -306,6 +316,7 @@
     const reloadButton = document.querySelector("#reloadButton");
     const playersEl = document.querySelector("#players");
     let adminKey = sessionStorage.getItem("wfct-admin-key") || "";
+    let proofGroups = {};
 
     if (adminKey) {
       adminKeyInput.value = adminKey;
@@ -367,6 +378,8 @@
     }
 
     function renderPlayers(players) {
+      proofGroups = {};
+
       if (!players.length) {
         playersEl.innerHTML = "";
         message.textContent = "No saved players yet.";
@@ -402,7 +415,11 @@
 
       const normalDone = Boolean(progress[`normal-${index}`]);
       const powerDone = Boolean(progress[`power-${index}`]);
-      const proof = firstProofLink(progress, index);
+      const proofs = allProofLinks(progress, index);
+      const proofGroupId = `proofs-${index}-${Math.random().toString(36).slice(2)}`;
+      if (proofs.length) {
+        proofGroups[proofGroupId] = proofs.map((proof) => proof.url);
+      }
       return `
         <article class="square ${normalDone || powerDone ? "done" : ""} ${powerDone ? "powered" : ""}">
           <strong>#${cell.sourceIndex}</strong>
@@ -413,18 +430,43 @@
           <p>${escapeHTML(cell.normal)}</p>
           <p><strong>Power:</strong> ${escapeHTML(powerText(cell))}</p>
           <div class="proof-links">
-            ${proof ? `<a href="${escapeHTML(proof)}" target="_blank" rel="noopener">Screenshot Proof</a>` : ""}
+            ${proofs.length > 1 ? `<button class="proof-open-all" type="button" data-open-proofs="${proofGroupId}">Open All Proofs</button>` : ""}
+            ${proofs.map((proof, proofIndex) => (
+              `<a href="${escapeHTML(proof.url)}" target="_blank" rel="noopener">${escapeHTML(proof.label || `Screenshot Proof ${proofIndex + 1}`)}</a>`
+            )).join("")}
           </div>
         </article>
       `;
     }
 
-    function firstProofLink(progress, index) {
-      return [
-        progress[`proof-${index}`],
-        progress[`proof-normal-${index}`],
-        progress[`proof-power-${index}`]
-      ].find((value) => /^https?:\/\//.test(value || "")) || "";
+    function allProofLinks(progress, index) {
+      const proofs = [];
+      const seen = {};
+
+      function addProof(url, label) {
+        if (!/^https?:\/\//.test(url || "") || seen[url]) return;
+        seen[url] = true;
+        proofs.push({ url, label });
+      }
+
+      const storedProofs = progress[`proofs-${index}`];
+      if (Array.isArray(storedProofs)) {
+        storedProofs.forEach((proof, proofIndex) => {
+          if (typeof proof === "string") {
+            addProof(proof, `Screenshot Proof ${proofIndex + 1}`);
+            return;
+          }
+
+          const label = proof.fileName || proof.name || `Screenshot Proof ${proofIndex + 1}`;
+          addProof(proof.url, label);
+        });
+      }
+
+      addProof(progress[`proof-${index}`], progress[`proofName-${index}`] || "Latest Screenshot Proof");
+      addProof(progress[`proof-normal-${index}`], "Normal Screenshot Proof");
+      addProof(progress[`proof-power-${index}`], "Power Screenshot Proof");
+
+      return proofs;
     }
 
     async function loadBoards() {
@@ -462,6 +504,13 @@
     });
 
     playersEl.addEventListener("click", async (event) => {
+      const proofButton = event.target.closest("[data-open-proofs]");
+      if (proofButton) {
+        const urls = proofGroups[proofButton.dataset.openProofs] || [];
+        urls.forEach((url) => window.open(url, "_blank", "noopener"));
+        return;
+      }
+
       const passwordButton = event.target.closest("[data-reset-password]");
       if (passwordButton) {
         const playerName = passwordButton.dataset.name;

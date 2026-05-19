@@ -552,14 +552,32 @@ function updateProofLink(sheet, profileKey, cellIndex, proofUrl, fileName) {
   const values = sheet.getDataRange().getValues();
   const proofKey = `proof-${cellIndex}`;
   const proofNameKey = `proofName-${cellIndex}`;
+  const proofsKey = `proofs-${cellIndex}`;
+  const uploadedAt = new Date().toISOString();
 
   for (let i = 1; i < values.length; i += 1) {
     if (values[i][0] === profileKey) {
       const progress = JSON.parse(values[i][3] || "{}");
+      const proofs = Array.isArray(progress[proofsKey]) ? progress[proofsKey] : [];
+
+      if (progress[proofKey] && /^https?:\/\//.test(progress[proofKey])) {
+        const existingName = progress[proofNameKey] || "Screenshot Proof";
+        const alreadyTracked = proofs.some((proof) => proof && proof.url === progress[proofKey]);
+        if (!alreadyTracked) {
+          proofs.push({
+            url: progress[proofKey],
+            fileName: existingName,
+            uploadedAt: values[i][5] || ""
+          });
+        }
+      }
+
+      proofs.push({ url: proofUrl, fileName, uploadedAt });
       progress[proofKey] = proofUrl;
       progress[proofNameKey] = fileName;
+      progress[proofsKey] = proofs;
       sheet.getRange(i + 1, 4).setValue(JSON.stringify(progress));
-      sheet.getRange(i + 1, 6).setValue(new Date().toISOString());
+      sheet.getRange(i + 1, 6).setValue(uploadedAt);
       return;
     }
   }
@@ -571,7 +589,7 @@ function mergeProofProgress(existingProgress, incomingProgress) {
   const merged = Object.assign({}, incomingProgress);
 
   Object.keys(existingProgress || {}).forEach((key) => {
-    const isProofKey = key.indexOf("proof-") === 0 || key.indexOf("proofName-") === 0;
+    const isProofKey = key.indexOf("proof-") === 0 || key.indexOf("proofName-") === 0 || key.indexOf("proofs-") === 0;
     if (isProofKey && (!merged[key] || merged[key] === "Upload sent")) {
       merged[key] = existingProgress[key];
     }
