@@ -1,6 +1,7 @@
 const SPREADSHEET_ID = "1f2HYxfmWESkjBKKi9rVzM8cnjzfunyivPHcDYzE_62M";
 const SHEET_NAME = "Players";
 const RESET_SHEET_NAME = "ResetLog";
+const PROOF_SHEET_NAME = "Proofs";
 const ADMIN_KEY = "CHANGE_THIS_TO_A_PRIVATE_ADMIN_PASSWORD";
 const PROOF_FOLDER_ID = "PASTE_FC_ADMIN_DRIVE_FOLDER_ID_HERE";
 
@@ -20,7 +21,7 @@ function doGet(e) {
   } else if (action === "assignments") {
     result = listAssignments(sheet);
   } else if (action === "list") {
-    result = isAdmin(e.parameter.adminKey) ? listPlayers(sheet) : { ok: false, error: "Not authorized." };
+    result = isAdmin(e.parameter.adminKey) ? listPlayers(sheet, getProofSheet()) : { ok: false, error: "Not authorized." };
   } else if (action === "resetPassword") {
     result = isAdmin(e.parameter.adminKey) ? resetPlayerPassword(sheet, e.parameter.profileKey) : { ok: false, error: "Not authorized." };
   } else if (action === "reset") {
@@ -63,7 +64,7 @@ function doPost(e) {
     }
 
     if (payload.action === "uploadProof") {
-      uploadProof(sheet, payload);
+      uploadProof(sheet, getProofSheet(), payload);
       return json({ ok: true });
     }
 
@@ -124,6 +125,28 @@ function getResetSheet() {
 
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(["profileKey", "resetAt"]);
+  }
+
+  return sheet;
+}
+
+function getProofSheet() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(PROOF_SHEET_NAME);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(PROOF_SHEET_NAME);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      "profileKey",
+      "playerName",
+      "cellIndex",
+      "proofUrl",
+      "fileName",
+      "uploadedAt"
+    ]);
   }
 
   return sheet;
@@ -198,12 +221,13 @@ function loginPlayer(sheet, resetSheet, normalizedName, profileKey) {
   return { ok: true, found: false, resetAt: getResetAt(resetSheet, profileKey) };
 }
 
-function listPlayers(sheet) {
+function listPlayers(sheet, proofSheet) {
   const values = sheet.getDataRange().getValues();
+  const proofHistory = proofHistoryByProfile(proofSheet);
   const players = [];
 
   for (let i = 1; i < values.length; i += 1) {
-    players.push(profileFromRow(values[i]));
+    players.push(attachProofHistory(profileFromRow(values[i]), proofHistory[values[i][0]] || []));
   }
 
   return { ok: true, players };
@@ -315,7 +339,7 @@ function savePlayer(sheet, profile) {
   }
 
   const values = sheet.getDataRange().getValues();
-  const incomingProgress = profile.progress || {};
+  const incomingProgress = stripProofHistory(profile.progress || {});
   const normalizedName = normalizeName(profile.normalizedName || profile.playerName);
 
   if (!normalizedName) {
@@ -515,7 +539,7 @@ function removeDuplicateRows(sheet, profileKey, keepRow) {
   }
 }
 
-function uploadProof(sheet, payload) {
+function uploadProof(sheet, proofSheet, payload) {
   if (!PROOF_FOLDER_ID || PROOF_FOLDER_ID === "PASTE_FC_ADMIN_DRIVE_FOLDER_ID_HERE") {
     throw new Error("Proof folder is not configured.");
   }
@@ -545,38 +569,25 @@ function uploadProof(sheet, payload) {
     .createFile(Utilities.newBlob(bytes, mimeType, fileName));
 
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  updateProofLink(sheet, profileKey, cellIndex, file.getUrl(), fileName);
+  updateProofLink(sheet, proofSheet, profileKey, cellIndex, file.getUrl(), fileName);
 }
 
-function updateProofLink(sheet, profileKey, cellIndex, proofUrl, fileName) {
+function updateProofLink(sheet, proofSheet, profileKey, cellIndex, proofUrl, fileName) {
   const values = sheet.getDataRange().getValues();
   const proofKey = `proof-${cellIndex}`;
   const proofNameKey = `proofName-${cellIndex}`;
-  const proofsKey = `proofs-${cellIndex}`;
   const uploadedAt = new Date().toISOString();
 
   for (let i = 1; i < values.length; i += 1) {
     if (values[i][0] === profileKey) {
       const progress = JSON.parse(values[i][3] || "{}");
-      const proofs = Array.isArray(progress[proofsKey]) ? progress[proofsKey] : [];
+      const playerName = values[i][1] || "";
 
-      if (progress[proofKey] && /^https?:\/\//.test(progress[proofKey])) {
-        const existingName = progress[proofNameKey] || "Screenshot Proof";
-        const alreadyTracked = proofs.some((proof) => proof && proof.url === progress[proofKey]);
-        if (!alreadyTracked) {
-          proofs.push({
-            url: progress[proofKey],
-            fileName: existingName,
-            uploadedAt: values[i][5] || ""
-          });
-        }
-      }
-
-      proofs.push({ url: proofUrl, fileName, uploadedAt });
+      migrateProofHistory(proofSheet, profileKey, playerName, progress, values[i][5] || "");
+      appendProofRecordIfMissing(proofSheet, profileKey, playerName, cellIndex, proofUrl, fileName, uploadedAt);
       progress[proofKey] = proofUrl;
       progress[proofNameKey] = fileName;
-      progress[proofsKey] = proofs;
-      sheet.getRange(i + 1, 4).setValue(JSON.stringify(progress));
+      sheet.getRange(i + 1, 4).setValue(JSON.stringify(stripProofHistory(progress)));
       sheet.getRange(i + 1, 6).setValue(uploadedAt);
       return;
     }
@@ -586,16 +597,115 @@ function updateProofLink(sheet, profileKey, cellIndex, proofUrl, fileName) {
 }
 
 function mergeProofProgress(existingProgress, incomingProgress) {
-  const merged = Object.assign({}, incomingProgress);
+  const merged = stripProofHistory(incomingProgress);
 
   Object.keys(existingProgress || {}).forEach((key) => {
-    const isProofKey = key.indexOf("proof-") === 0 || key.indexOf("proofName-") === 0 || key.indexOf("proofs-") === 0;
+    const isProofKey = key.indexOf("proof-") === 0 || key.indexOf("proofName-") === 0;
     if (isProofKey && (!merged[key] || merged[key] === "Upload sent")) {
       merged[key] = existingProgress[key];
     }
   });
 
-  return merged;
+  return stripProofHistory(merged);
+}
+
+function stripProofHistory(progress) {
+  const compact = {};
+
+  Object.keys(progress || {}).forEach((key) => {
+    if (key.indexOf("proofs-") !== 0) {
+      compact[key] = progress[key];
+    }
+  });
+
+  return compact;
+}
+
+function proofHistoryByProfile(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const grouped = {};
+
+  for (let i = 1; i < values.length; i += 1) {
+    const profileKey = values[i][0];
+    if (!profileKey || !values[i][3]) continue;
+    if (!grouped[profileKey]) grouped[profileKey] = [];
+    grouped[profileKey].push({
+      cellIndex: String(values[i][2]),
+      url: values[i][3],
+      fileName: values[i][4] || "Screenshot Proof",
+      uploadedAt: values[i][5] || ""
+    });
+  }
+
+  return grouped;
+}
+
+function attachProofHistory(profile, proofs) {
+  profile.progress = Object.assign({}, profile.progress || {});
+
+  proofs.forEach((proof) => {
+    const proofsKey = `proofs-${proof.cellIndex}`;
+    if (!Array.isArray(profile.progress[proofsKey])) {
+      profile.progress[proofsKey] = [];
+    }
+    if (!profile.progress[proofsKey].some((item) => item && item.url === proof.url)) {
+      profile.progress[proofsKey].push({
+        url: proof.url,
+        fileName: proof.fileName,
+        uploadedAt: proof.uploadedAt
+      });
+    }
+  });
+
+  return profile;
+}
+
+function migrateProofHistory(proofSheet, profileKey, playerName, progress, fallbackUploadedAt) {
+  Object.keys(progress || {}).forEach((key) => {
+    const match = key.match(/^proofs-(\d+)$/);
+    if (!match || !Array.isArray(progress[key])) return;
+    progress[key].forEach((proof) => {
+      if (!proof) return;
+      const url = typeof proof === "string" ? proof : proof.url;
+      const fileName = typeof proof === "string" ? "Screenshot Proof" : (proof.fileName || proof.name || "Screenshot Proof");
+      const uploadedAt = typeof proof === "string" ? fallbackUploadedAt : (proof.uploadedAt || fallbackUploadedAt);
+      appendProofRecordIfMissing(proofSheet, profileKey, playerName, match[1], url, fileName, uploadedAt);
+    });
+  });
+
+  Object.keys(progress || {}).forEach((key) => {
+    const match = key.match(/^proof-(\d+)$/);
+    if (!match || !/^https?:\/\//.test(progress[key] || "")) return;
+    appendProofRecordIfMissing(
+      proofSheet,
+      profileKey,
+      playerName,
+      match[1],
+      progress[key],
+      progress[`proofName-${match[1]}`] || "Screenshot Proof",
+      fallbackUploadedAt
+    );
+  });
+}
+
+function appendProofRecordIfMissing(sheet, profileKey, playerName, cellIndex, proofUrl, fileName, uploadedAt) {
+  if (!/^https?:\/\//.test(proofUrl || "")) return;
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i][0] === profileKey && String(values[i][2]) === String(cellIndex) && values[i][3] === proofUrl) {
+      return;
+    }
+  }
+
+  sheet.appendRow([
+    profileKey,
+    playerName || "",
+    String(cellIndex),
+    proofUrl,
+    fileName || "Screenshot Proof",
+    uploadedAt || new Date().toISOString()
+  ]);
 }
 
 function json(data) {
