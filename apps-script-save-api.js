@@ -583,7 +583,6 @@ function updateProofLink(sheet, proofSheet, profileKey, cellIndex, proofUrl, fil
       const progress = JSON.parse(values[i][3] || "{}");
       const playerName = values[i][1] || "";
 
-      migrateProofHistory(proofSheet, profileKey, playerName, progress, values[i][5] || "");
       appendProofRecordIfMissing(proofSheet, profileKey, playerName, cellIndex, proofUrl, fileName, uploadedAt);
       progress[proofKey] = proofUrl;
       progress[proofNameKey] = fileName;
