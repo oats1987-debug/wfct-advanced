@@ -513,7 +513,9 @@
 
     function renderLineGroup(target, players, lineCount) {
       const names = sortPlayers(players, "completedLines")
-        .filter((player) => player.completedLines === lineCount)
+        .filter((player) => lineCount === 3
+          ? Number(player.completedLines || 0) >= 3
+          : Number(player.completedLines || 0) === lineCount)
         .map((player) => player.playerName);
 
       if (!names.length) {
